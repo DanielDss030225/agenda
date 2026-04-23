@@ -38,6 +38,7 @@ const S = {
   lastModalClose: 0,
   financeType: 'expense',
   editingTransactionId: null,
+  editingOccurrenceDate: null,
   showGlobalFinance: localStorage.getItem('agbizu_show_global_finance') !== 'false'
 };
 
@@ -56,14 +57,17 @@ function play(key) {
 }
 
 // Global click listener for sounds and modal blocking
+let mouseDownTarget = null;
+document.addEventListener('mousedown', (e) => { mouseDownTarget = e.target; });
+
 document.addEventListener('click', (e) => {
   const activeModal = document.querySelector('.modal-overlay:not(.hidden)');
 
   // Se houver modal aberto
   if (activeModal) {
     const sheet = activeModal.querySelector('.modal-sheet');
-    // Se o clique for fora do "papel" do modal (ou seja, no fundo escuro)
-    if (sheet && !sheet.contains(e.target)) {
+    // Se o clique (tanto o mousedown quanto o mouseup/click target) for fora do "papel" do modal
+    if (sheet && !sheet.contains(e.target) && !sheet.contains(mouseDownTarget)) {
       e.preventDefault();
       e.stopPropagation();
       play('click');
@@ -143,6 +147,7 @@ function startRealtimeSync() {
         checked: t.checked || false
       }));
       if (!$('modal-finances').classList.contains('hidden')) updateFinanceUI();
+      S.lastRenderedYear = null;
       refreshCalendar();
     });
   } catch (e) {
@@ -373,6 +378,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
       const data = snap.val() || {};
       S.userScale = data.scale || null;
       S.soundsEnabled = data.sounds !== undefined ? data.sounds : true;
+      updateSoundIcon();
 
       // If new user, initialize basic entry
       if (!snap.exists()) {
@@ -406,7 +412,6 @@ function initApp() {
     }
     else {
       S.forceScale = true;
-      setTimeout(() => { openScaleModal(); }, 400);
     }
 
     S.currentDate = new Date();
@@ -419,6 +424,8 @@ function initApp() {
     if (typeof window.showAgentFab === 'function') window.showAgentFab();
 
     if (typeof i18n !== 'undefined') i18n.applyToDOM();
+    updateSoundIcon();
+    runOnboardingFlow();
     hideLoading();
     console.log("[DEBUG] initApp finalizado com sucesso");
   } catch (err) {
@@ -595,57 +602,89 @@ function fmtMonthYear(date) {
 }
 
 // ======================== EVENTS ========================
-function getEventsForDate(date) {
-  const targetDate = normalizeDate(date);
+function getEventsForDate(d) {
+  const targetDate = normalizeDate(d);
   const targetStr = toDateStr(targetDate);
+  const result = [];
 
-  return S.events.filter(e => {
+  S.events.forEach(e => {
     const start = normalizeDate(e.date);
-    if (targetDate < start) return false; // Evento ainda não começou
+    if (targetDate < start) return;
 
-    if (e.date === targetStr) return true; // Data exata
-    if (!e.recurrence || e.recurrence === 'none') return false;
+    if (e.date === targetStr) {
+      result.push({ ...e, isIgnored: !!(e.excludedDates && e.excludedDates[targetStr]), occurrenceDate: targetStr });
+      return;
+    }
 
-    // Lógica de Recorrência
-    if (e.recurrence === 'daily') return true;
+    if (!e.recurrence || e.recurrence === 'none') return;
 
-    if (e.recurrence === 'weekly') {
+    let isOccurrence = false;
+    if (e.recurrence === 'daily') isOccurrence = true;
+    else if (e.recurrence === 'weekly') {
       const diffDays = Math.round((targetDate - start) / 86400000);
-      return diffDays % 7 === 0;
+      isOccurrence = diffDays % 7 === 0;
+    }
+    else if (e.recurrence === 'monthly') {
+      isOccurrence = targetDate.getDate() === start.getDate();
+    }
+    else if (e.recurrence === 'yearly') {
+      isOccurrence = targetDate.getDate() === start.getDate() && targetDate.getMonth() === start.getMonth();
     }
 
-    if (e.recurrence === 'monthly') {
-      return targetDate.getDate() === start.getDate();
+    if (isOccurrence) {
+      let finalItem = { ...e, isIgnored: !!(e.excludedDates && e.excludedDates[targetStr]), occurrenceDate: targetStr };
+      // Aplicar sobreposição se existir para este dia
+      if (e.overrides && e.overrides[targetStr]) {
+        finalItem = { ...finalItem, ...e.overrides[targetStr] };
+      }
+      result.push(finalItem);
     }
-
-    if (e.recurrence === 'yearly') {
-      return targetDate.getDate() === start.getDate() &&
-        targetDate.getMonth() === start.getMonth();
-    }
-
-    return false;
   });
+  return result;
 }
 
 function getTransactionsForDate(d) {
   const targetDate = normalizeDate(d);
   const targetStr = toDateStr(targetDate);
+  const result = [];
 
-  return S.transactions.filter(t => {
+  S.transactions.forEach(t => {
     const start = normalizeDate(t.date);
-    if (targetDate < start) return false;
+    if (targetDate < start) return;
 
-    if (t.date === targetStr) return true;
-    if (!t.recurrence || t.recurrence === 'none') return false;
+    if (t.date === targetStr) {
+      let finalItem = { ...t, isIgnored: !!(t.excludedDates && t.excludedDates[targetStr]), occurrenceDate: targetStr };
+      if (t.overrides && t.overrides[targetStr]) {
+        finalItem = { ...finalItem, ...t.overrides[targetStr] };
+      }
+      result.push(finalItem);
+      return;
+    }
 
-    if (t.recurrence === 'monthly') {
-      return targetDate.getDate() === start.getDate();
+    if (!t.recurrence || t.recurrence === 'none') return;
+
+    let isOccurrence = false;
+    if (t.recurrence === 'daily') isOccurrence = true;
+    else if (t.recurrence === 'weekly') {
+      const diffDays = Math.round((targetDate - start) / 86400000);
+      isOccurrence = diffDays % 7 === 0;
     }
-    if (t.recurrence === 'yearly') {
-      return targetDate.getDate() === start.getDate() && targetDate.getMonth() === start.getMonth();
+    else if (t.recurrence === 'monthly') {
+      isOccurrence = targetDate.getDate() === start.getDate();
     }
-    return false;
+    else if (t.recurrence === 'yearly') {
+      isOccurrence = targetDate.getDate() === start.getDate() && targetDate.getMonth() === start.getMonth();
+    }
+
+    if (isOccurrence) {
+      let finalItem = { ...t, isIgnored: !!(t.excludedDates && t.excludedDates[targetStr]), occurrenceDate: targetStr };
+      if (t.overrides && t.overrides[targetStr]) {
+        finalItem = { ...finalItem, ...t.overrides[targetStr] };
+      }
+      result.push(finalItem);
+    }
   });
+  return result;
 }
 
 async function addEvent(data) {
@@ -730,7 +769,26 @@ function toggleSideMenu(open) {
 
 window.closeAnyModal = () => {
   toggleSideMenu(false);
-  ['modal-day', 'modal-event', 'modal-search', 'modal-scale', 'modal-logout', 'modal-onboarding-sound', 'modal-bible', 'modal-lang', 'modal-finances', 'modal-transaction', 'modal-confirm'].forEach(closeModal);
+  ['modal-day', 'modal-event', 'modal-search', 'modal-scale', 'modal-logout', 'modal-onboarding-sound', 'modal-bible', 'modal-lang', 'modal-finances', 'modal-transaction', 'modal-confirm', 'modal-recurrence-choice'].forEach(closeModal);
+};
+
+window.showRecurrenceChoiceModal = function(onOnlyThis, onAll) {
+  play('click');
+  if (typeof i18n !== 'undefined') i18n.applyToDOM();
+  
+  $('btn-save-recurring-all').onclick = () => {
+    closeModal('modal-recurrence-choice');
+    onAll();
+  };
+  $('btn-save-recurring-instance').onclick = () => {
+    closeModal('modal-recurrence-choice');
+    onOnlyThis();
+  };
+  $('btn-cancel-recurring-choice').onclick = () => {
+    closeModal('modal-recurrence-choice');
+  };
+  
+  openModal('modal-recurrence-choice');
 };
 
 window.showConfirmModal = function (titleKey, descKey, onConfirm) {
@@ -782,6 +840,7 @@ function updateGlobalFinanceSummary() {
     const d = new Date(y, m, i);
     const trs = getTransactionsForDate(d);
     trs.forEach(t => {
+      if (t.isIgnored) return;
       if (t.type === 'income') totalInc += t.amount;
       else totalExp += t.amount;
     });
@@ -852,8 +911,8 @@ function initMonthSwiper(year) {
 
       let pillsHtml = '';
       const allItems = [
-        ...evs.map(ev => ({ type: 'event', title: ev.title, time: ev.time, color: catColor(ev.category) })),
-        ...trs.map(t => ({ type: 'finance', title: t.desc, amount: t.amount, color: t.type === 'income' ? '#16a34a' : '#dc2626' }))
+        ...evs.filter(e => !e.isIgnored).map(ev => ({ type: 'event', title: ev.title, time: ev.time, color: catColor(ev.category) })),
+        ...trs.filter(t => !t.isIgnored).map(t => ({ type: 'finance', title: t.desc, amount: t.amount, color: t.type === 'income' ? '#16a34a' : '#dc2626' }))
       ];
 
       pillsHtml = allItems.slice(0, 2).map(item => {
@@ -905,6 +964,7 @@ function renderYearView() {
       const d = new Date(year, m, day);
       const trs = getTransactionsForDate(d);
       trs.forEach(tr => {
+        if (tr.isIgnored) return;
         if (tr.type === 'income') mIncome += tr.amount;
         else mExpense += tr.amount;
       });
@@ -983,7 +1043,7 @@ function renderYearView() {
       const ds = toDateStr(date);
       const ws = getWorkStatus(date, S.userScale);
       let cls = 'mini-day' + (!cur ? ' other' : (ds === today ? ' today' : (isHoliday(date) ? ' holiday' : (ws ? (ws.isOff ? ' off-day' : ' work-day') : ''))));
-      if (cur && getEventsForDate(date).length > 0) cls += ' has-event';
+      if (cur && getEventsForDate(date).filter(e => !e.isIgnored).length > 0) cls += ' has-event';
       html += `<div class="${cls}">${cur ? date.getDate() : ''}</div>`;
     });
 
@@ -1078,19 +1138,19 @@ function openDayModal(d) {
   evs.forEach(ev => {
     const div = document.createElement('div');
     div.className = 'event-item';
-    div.style = 'display:flex; padding:12px; background:var(--bg); border:1px solid var(--border); border-radius:12px; margin-bottom:8px; gap:12px; cursor:pointer; align-items:flex-start;';
+    div.style = `padding:10px; background:var(--surface); border:1px solid var(--border); border-radius:12px; margin-bottom:10px; cursor:pointer; opacity: ${ev.isIgnored ? '0.4' : '1'};`;
     div.innerHTML = `
-      <div class="event-color" style="background:${catColor(ev.category)}; width:4px; border-radius:4px; align-self:stretch;"></div>
-      <div class="event-info" style="flex:1;">
-        <div style="display:flex; justify-content:space-between; align-items:baseline;">
-          <div class="event-item-title" style="font-size:0.9rem; font-weight:700; color:var(--text);">${ev.title}</div>
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div style="flex:1;">
+          <div class="event-item-title" style="font-size:0.9rem; font-weight:700; color:var(--text); text-decoration: ${ev.isIgnored ? 'line-through' : 'none'};">${ev.title}</div>
           <div style="font-size:0.7rem; color:var(--text2); font-weight:600;">${ev.time || ''}</div>
         </div>
-        ${ev.description ? `<div style="font-size:0.75rem; color:var(--text2); margin-top:4px; line-height:1.4;">${ev.description}</div>` : ''}
-        <div style="font-size:0.65rem; color:var(--text3); margin-top:6px; font-style:italic;">${new Date(ev.date + 'T12:00:00').toLocaleDateString()}</div>
+        ${ev.isIgnored ? '<span class="material-symbols-outlined" style="font-size: 16px; color: var(--text3);">event_busy</span>' : ''}
       </div>
+      ${ev.description ? `<div style="font-size:0.9rem; color:var(--text2); margin-top:4px; line-height:1.4;">${ev.description}</div>` : ''}
+      <div style="font-size:0.65rem; color:var(--text3); margin-top:6px; font-style:italic;">${new Date(ev.date + 'T12:00:00').toLocaleDateString()}</div>
     `;
-    div.onclick = () => { closeModal('modal-day'); S.editingEventId = ev.id; openEventForm(ev); };
+    div.onclick = () => { closeModal('modal-day'); S.editingEventId = ev.id; openEventForm(ev, d); };
     evList.appendChild(div);
   });
 
@@ -1102,7 +1162,7 @@ function openDayModal(d) {
     const isChecked = !!t.checked;
     const div = document.createElement('div');
     div.className = 'finance-item' + (isChecked ? ' checked' : '');
-    div.style = `display:flex; align-items:center; gap:10px; padding:8px; background:var(--bg); border:1px solid var(--border); border-radius:12px; margin-bottom:6px; cursor:pointer; opacity: ${isChecked ? '0.6' : '1'}; transition: all 0.2s;`;
+    div.style = `display:flex; align-items:center; gap:10px; padding:8px; background:var(--bg); border:1px solid var(--border); border-radius:12px; margin-bottom:6px; cursor:pointer; opacity: ${t.isIgnored ? '0.4' : (isChecked ? '0.6' : '1')}; transition: all 0.2s;`;
     div.innerHTML = `
       <button class="btn btn-ghost btn-icon-sm" onclick="window.toggleTransactionStatus('${t.id}', event)" style="color: ${isChecked ? 'var(--primary)' : 'var(--text3)'}; padding: 0; width: 24px; height: 24px;">
         <span class="material-symbols-outlined" style="font-size:20px; font-variation-settings: 'FILL' ${isChecked ? 1 : 0}">${isChecked ? 'check_circle' : 'radio_button_unchecked'}</span>
@@ -1111,11 +1171,12 @@ function openDayModal(d) {
         <span class="material-symbols-outlined" style="font-size:14px;">${t.type === 'income' ? 'trending_up' : 'trending_down'}</span>
       </div>
       <div style="flex:1;">
-        <div style="font-size:0.75rem; font-weight:700; color:var(--text); text-decoration: ${isChecked ? 'line-through' : 'none'};">${t.desc}</div>
+        <div style="font-size:0.9rem; font-weight:700; color:var(--text); text-decoration: ${(isChecked || t.isIgnored) ? 'line-through' : 'none'};">${t.desc}</div>
       </div>
-      <div style="font-size:0.75rem; font-weight:700; color:${t.type === 'income' ? '#16a34a' : '#dc2626'}; text-align:right; text-decoration: ${isChecked ? 'line-through' : 'none'};">
+      <div style="font-size:0.9rem; font-weight:700; color:${t.type === 'income' ? '#16a34a' : '#dc2626'}; text-align:right; text-decoration: ${(isChecked || t.isIgnored) ? 'line-through' : 'none'};">
         ${t.type === 'income' ? '+' : '-'} ${formatVal(t.amount)}
       </div>
+      ${t.isIgnored ? '<span class="material-symbols-outlined" style="font-size: 16px; color: var(--text3);">event_busy</span>' : ''}
     `;
     div.onclick = (e) => {
       if (e.target.closest('button')) return;
@@ -1138,18 +1199,55 @@ window.delEvent = async (id) => {
   hideLoading();
 };
 
-function openEventForm(event = null) {
-  S.editingEventId = event?.id || null;
+function openEventForm(evt, clickedDate = null) {
+  const isNew = !evt;
+  S.editingEventId = isNew ? null : evt.id;
+  S.editingOccurrenceDate = clickedDate ? toDateStr(clickedDate) : (evt ? evt.date : toDateStr(new Date()));
   const t = (k) => typeof i18n !== 'undefined' ? i18n.t(k) : k;
-  $('event-modal-title').textContent = event ? t('edit_event') : t('new_event');
-  $('evt-title').value = event?.title || '';
-  $('evt-desc').value = event?.description || '';
-  $('evt-time').value = event?.time || '';
-  $('evt-date').value = event?.date || toDateStr(S.selectedDate || new Date());
+  $('event-modal-title').textContent = evt ? t('edit_event') : t('new_event');
+  $('evt-title').value = evt?.title || '';
+  $('evt-desc').value = evt?.description || '';
+  $('evt-time').value = evt?.time || '';
+  // Se for uma ocorrência recorrente aberta do modal do dia, usamos a data do dia (d)
+  const displayDate = d || (event?.date ? new Date(event.date + 'T12:00:00') : (S.selectedDate || new Date()));
+  $('evt-date').value = toDateStr(displayDate);
   $('evt-recurrence').value = event?.recurrence || 'none';
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === (event?.category || 'evento')));
   if (event) show('btn-delete-event'); else hide('btn-delete-event');
   updateWorkBadge($('evt-date').value);
+
+  // Mostrar botão de "Desconsiderar" para qualquer item recorrente
+  if (event) {
+    const recArea = $('event-recurring-options');
+    const btnIgnore = $('btn-ignore-event-instance');
+    if (recArea && btnIgnore) {
+      if (event.recurrence && event.recurrence !== 'none') {
+        recArea.classList.remove('hidden');
+        // Toggle texto conforme estado e recorrência
+        const isIgnored = event.excludedDates && event.excludedDates[$('evt-date').value];
+        const recType = event.recurrence || 'daily';
+        const i18nKey = (isIgnored ? 'consider_instance_' : 'ignore_instance_') + recType;
+        
+        const span = btnIgnore.querySelector('[data-i18n]');
+        if (span) {
+          span.setAttribute('data-i18n', i18nKey);
+          if (typeof i18n !== 'undefined') span.innerHTML = i18n.t(i18nKey);
+        }
+        if (typeof i18n !== 'undefined') i18n.applyToDOM();
+        
+        btnIgnore.style.color = isIgnored ? 'var(--primary)' : 'var(--danger)';
+        btnIgnore.style.borderColor = isIgnored ? 'var(--primary-lt)' : 'var(--danger-lt)';
+        const icon = btnIgnore.querySelector('.material-symbols-outlined');
+        if (icon) icon.textContent = isIgnored ? 'event_available' : 'event_busy';
+      } else {
+        recArea.classList.add('hidden');
+      }
+    }
+  } else {
+    // Modo Novo
+    if ($('event-recurring-options')) $('event-recurring-options').classList.add('hidden');
+  }
+
   openModal('modal-event');
 }
 
@@ -1186,14 +1284,63 @@ async function saveEventForm(e) {
   isSavingEvent = true;
   showLoading('loading_saving');
   const data = { title, date, description: $('evt-desc').value.trim(), time: $('evt-time').value, category: document.querySelector('.cat-btn.active')?.dataset.cat || 'evento', recurrence: $('evt-recurrence').value };
-  if (S.editingEventId) await updateEvent(S.editingEventId, data); else await addEvent(data);
+  
+  const original = S.editingEventId ? S.events.find(e => e.id === S.editingEventId) : null;
+  const isRecurring = original && original.recurrence && original.recurrence !== 'none';
+  // O bug era aqui: agora permitimos a escolha sempre que for recorrente
+  const shouldAsk = isRecurring; 
+  const isEditingVirtual = isRecurring && S.editingOccurrenceDate !== original.date;
 
-  S.lastRenderedYear = null;
-  refreshCalendar();
-  hideLoading();
-  closeModal('modal-event');
-  play('click');
-  setTimeout(() => isSavingEvent = false, 500);
+  const performAllSave = async () => {
+    showLoading('loading_saving');
+    const saveData = { ...data };
+    // BUG FIX: Mantém a data original da série se for um "Salvar Todos" vindo de repetição
+    if (isEditingVirtual && original) {
+       saveData.date = original.date;
+    }
+    if (S.editingEventId) await updateEvent(S.editingEventId, saveData); else await addEvent(saveData);
+    finishSave();
+  };
+
+  const performInstanceSave = async () => {
+    try {
+      showLoading('loading_saving');
+      if (original) {
+        // Em vez de criar novo item, adicionamos aos 'overrides' do original
+        const overrideData = {
+          title: data.title,
+          description: data.description,
+          time: data.time,
+          category: data.category,
+          date: data.date // Permite mudar a data da ocorrência específica (opcional)
+        };
+        if (!original.overrides) original.overrides = {};
+        original.overrides[S.editingOccurrenceDate] = overrideData;
+        await userRef(`events/${original.id}/overrides/${S.editingOccurrenceDate}`).set(overrideData);
+      }
+      finishSave();
+    } catch (err) {
+      console.error("Erro ao salvar sobreposição:", err);
+      alert("Erro ao aplicar edição específica.");
+      hideLoading();
+    }
+  };
+
+  const finishSave = () => {
+    S.lastRenderedYear = null;
+    refreshCalendar();
+    hideLoading();
+    closeModal('modal-event');
+    play('click');
+    setTimeout(() => isSavingEvent = false, 500);
+  };
+
+  if (shouldAsk) {
+    window.showRecurrenceChoiceModal(performInstanceSave, performAllSave);
+    isSavingEvent = false; 
+  } else {
+    await performAllSave();
+  }
 }
 
 // Limpar erro ao digitar
@@ -1359,6 +1506,7 @@ async function saveScale() {
   closeModal('modal-scale');
   S.lastRenderedYear = null;
   refreshCalendar();
+  runOnboardingFlow();
 }
 
 window.setOnboardingSound = (enabled) => {
@@ -1400,12 +1548,20 @@ function renderSearch(query) {
 }
 
 // Mensagem Diária e Onboarding Sequencial
-setTimeout(() => {
-  const showedBible = checkDailyMessage();
-  if (!showedBible) {
-    checkOnboardingSound();
+function runOnboardingFlow() {
+  // 1. Escala Obrigatória
+  if (S.forceScale) {
+    setTimeout(() => { openScaleModal(); }, 400);
+    return;
   }
-}, 800);
+
+  // 2. Mensagem Bíblica Diária
+  const showedBible = checkDailyMessage();
+  if (showedBible) return;
+
+  // 3. Onboarding de Som
+  checkOnboardingSound();
+}
 
 window.checkOnboardingSound = () => {
   if (!localStorage.getItem('agbizu_onboarding_sound')) {
@@ -1472,7 +1628,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if ($('btn-close-bible')) {
     $('btn-close-bible').onclick = () => {
       closeModal('modal-bible');
-      window.checkOnboardingSound();
+      runOnboardingFlow();
     };
   }
 
@@ -1673,7 +1829,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const transDateValue = $('trans-date').value;
       const transDescValue = $('trans-desc').value || 'Transação';
 
-      const trans = {
+      const saveDataLocal = {
         id: transId,
         type: S.financeType,
         desc: transDescValue,
@@ -1682,26 +1838,67 @@ document.addEventListener('DOMContentLoaded', () => {
         recurrence: $('trans-recurrence')?.value || 'none'
       };
 
-      try {
-        isSavingTrans = true;
-        showLoading('loading_saving');
+      const original = S.editingTransactionId ? S.transactions.find(t => t.id === S.editingTransactionId) : null;
+      const isRecurring = original && original.recurrence && original.recurrence !== 'none';
+      const shouldAsk = isRecurring;
+      const isEditingVirtual = isRecurring && S.editingOccurrenceDate !== original.date;
 
-        const idx = S.transactions.findIndex(t => t.id === transId);
-        if (idx !== -1) S.transactions[idx] = trans; else S.transactions.push(trans);
-
-        await userRef(`transactions/${transId}`).set(trans);
+      const finishTransSave = () => {
         S.lastRenderedYear = null;
         refreshCalendar();
-        // Atualiza a UI financeira silenciosamente se o modal estiver aberto
         if (!$('modal-finances').classList.contains('hidden')) updateFinanceUI();
         hideLoading();
         closeModal('modal-transaction');
+        setTimeout(() => isSavingTrans = false, 500);
+      };
+
+      const performAllSave = async () => {
+        showLoading('loading_saving');
+        const finalData = { ...saveDataLocal };
+        if (isEditingVirtual && original) {
+           finalData.date = original.date;
+        }
+        const idx = S.transactions.findIndex(t => t.id === transId);
+        if (idx !== -1) S.transactions[idx] = finalData; else S.transactions.push(finalData);
+        await userRef(`transactions/${transId}`).set(finalData);
+        finishTransSave();
+      };
+
+      const performInstanceSave = async () => {
+        try {
+          showLoading('loading_saving');
+          if (original) {
+            const overrideData = {
+              desc: saveDataLocal.desc,
+              amount: saveDataLocal.amount,
+              type: saveDataLocal.type,
+              date: saveDataLocal.date
+            };
+            if (!original.overrides) original.overrides = {};
+            original.overrides[S.editingOccurrenceDate] = overrideData;
+            await userRef(`transactions/${original.id}/overrides/${S.editingOccurrenceDate}`).set(overrideData);
+          }
+          finishTransSave();
+        } catch (err) {
+          console.error("Erro ao salvar sobreposição de transação:", err);
+          alert("Erro ao processar transação.");
+          hideLoading();
+        }
+      };
+
+      try {
+        if (shouldAsk) {
+          window.showRecurrenceChoiceModal(performInstanceSave, performAllSave);
+          isSavingTrans = false;
+        } else {
+          isSavingTrans = true;
+          await performAllSave();
+        }
       } catch (err) {
         hideLoading();
         console.error("Error saving transaction:", err);
         alert("Erro ao salvar transação. Verifique sua conexão.");
-      } finally {
-        setTimeout(() => isSavingTrans = false, 500);
+        isSavingTrans = false;
       }
     };
   }
@@ -1723,7 +1920,21 @@ document.addEventListener('DOMContentLoaded', () => {
     console.warn("[DEBUG] Elemento 'btn-add-fin-from-day' NÃO encontrado no DOM durante registro");
   }
 
-  // ---- Sistema Ultra-Robusto de Bottom Sheet (Arrastar e Fechar) ----
+  if ($('btn-ignore-event-instance')) {
+    $('btn-ignore-event-instance').onclick = () => {
+      const dateStr = $('evt-date').value;
+      const eventId = $('evt-id').value;
+      if (eventId && dateStr) window.ignoreEventInstance(eventId, dateStr);
+    };
+  }
+
+  if ($('btn-ignore-trans-instance')) {
+    $('btn-ignore-trans-instance').onclick = () => {
+      const dateStr = $('trans-date').value;
+      const transId = S.editingTransactionId;
+      if (transId && dateStr) window.ignoreTransactionInstance(transId, dateStr);
+    };
+  }
   document.querySelectorAll('.modal-sheet').forEach(sheet => {
     const overlay = sheet.parentElement;
     const overlayId = overlay.id;
@@ -1821,6 +2032,7 @@ function updateFinanceUI() {
     const d = new Date(y, m, i);
     const trs = getTransactionsForDate(d);
     trs.forEach(t => {
+      if (t.isIgnored) return;
       if (t.type === 'income') totalInc += t.amount;
       else totalExp += t.amount;
       if (!allForMonth.some(x => x.id === t.id)) {
@@ -1904,6 +2116,7 @@ window.openTransactionForm = function (d = null, trans = null) {
 
   form.reset();
   S.editingTransactionId = trans ? trans.id : null;
+  S.editingOccurrenceDate = d ? toDateStr(d) : (trans ? trans.date : toDateStr(new Date()));
   const t = (k) => typeof i18n !== 'undefined' ? i18n.t(k) : k;
   const titleEl = document.querySelector('#modal-transaction .modal-title');
   const btnDel = $('btn-delete-transaction');
@@ -1914,14 +2127,44 @@ window.openTransactionForm = function (d = null, trans = null) {
     if (btnDel) btnDel.classList.remove('hidden');
     if ($('trans-desc')) $('trans-desc').value = trans.desc || '';
     if ($('trans-amount')) $('trans-amount').value = trans.amount || 0;
-    if ($('trans-date')) $('trans-date').value = trans.date || toDateStr(new Date());
+    // Se for ocorrência recorrente, d terá a data clicada
+    const displayDate = d || (trans.date ? new Date(trans.date + 'T12:00:00') : new Date());
+    if ($('trans-date')) $('trans-date').value = toDateStr(displayDate);
     if ($('trans-recurrence')) $('trans-recurrence').value = trans.recurrence || 'none';
     window.setTransType(trans.type || 'expense');
+
+    // Mostrar botão de "Desconsiderar" para qualquer transação recorrente
+    const recArea = $('trans-recurring-options');
+    const btnIgnore = $('btn-ignore-trans-instance');
+    if (recArea && btnIgnore) {
+      if (trans.recurrence && trans.recurrence !== 'none') {
+        recArea.classList.remove('hidden');
+        // Toggle texto conforme estado e recorrência
+        const isIgnored = trans.excludedDates && trans.excludedDates[$('trans-date').value];
+        const recType = trans.recurrence || 'monthly';
+        const i18nKey = (isIgnored ? 'consider_instance_' : 'ignore_instance_') + recType;
+
+        const span = btnIgnore.querySelector('[data-i18n]');
+        if (span) {
+          span.setAttribute('data-i18n', i18nKey);
+          if (typeof i18n !== 'undefined') span.innerHTML = i18n.t(i18nKey);
+        }
+        if (typeof i18n !== 'undefined') i18n.applyToDOM();
+
+        btnIgnore.style.color = isIgnored ? 'var(--primary)' : 'var(--danger)';
+        btnIgnore.style.borderColor = isIgnored ? 'var(--primary-lt)' : 'var(--danger-lt)';
+        const icon = btnIgnore.querySelector('.material-symbols-outlined');
+        if (icon) icon.textContent = isIgnored ? 'event_available' : 'event_busy';
+      } else {
+        recArea.classList.add('hidden');
+      }
+    }
   } else {
     // Modo Novo
     if (titleEl) titleEl.textContent = t('finance_add') || 'Nova Transação';
     if (btnDel) btnDel.classList.add('hidden');
     if ($('trans-date')) $('trans-date').value = toDateStr(d || new Date());
+    if ($('trans-recurring-options')) $('trans-recurring-options').classList.add('hidden');
     window.setTransType('expense');
   }
 
@@ -1986,3 +2229,56 @@ function getShortestPattern(arr) {
   }
   return arr;
 }
+window.ignoreEventInstance = async function (id, dateStr) {
+  const event = S.events.find(e => e.id === id);
+  if (!event) return;
+  const isCurrentlyIgnored = !!(event.excludedDates && event.excludedDates[dateStr]);
+
+  try {
+    showLoading('loading_saving');
+    if (!event.excludedDates) event.excludedDates = {};
+
+    if (isCurrentlyIgnored) {
+      delete event.excludedDates[dateStr];
+      await userRef(`events/${id}/excludedDates/${dateStr}`).remove();
+    } else {
+      event.excludedDates[dateStr] = true;
+      await userRef(`events/${id}/excludedDates/${dateStr}`).set(true);
+    }
+
+    refreshCalendar();
+    hideLoading();
+    closeModal('modal-event');
+  } catch (err) {
+    hideLoading();
+    console.error("Error toggling ignore status for event:", err);
+  }
+};
+
+window.ignoreTransactionInstance = async function (id, dateStr) {
+  const t = S.transactions.find(x => x.id === id);
+  if (!t) return;
+  const isCurrentlyIgnored = !!(t.excludedDates && t.excludedDates[dateStr]);
+
+  try {
+    showLoading('loading_saving');
+    if (!t.excludedDates) t.excludedDates = {};
+
+    if (isCurrentlyIgnored) {
+      delete t.excludedDates[dateStr];
+      await userRef(`transactions/${id}/excludedDates/${dateStr}`).remove();
+    } else {
+      t.excludedDates[dateStr] = true;
+      await userRef(`transactions/${id}/excludedDates/${dateStr}`).set(true);
+    }
+
+    S.lastRenderedYear = null;
+    refreshCalendar();
+    if (!$('modal-finances').classList.contains('hidden')) updateFinanceUI();
+    hideLoading();
+    closeModal('modal-transaction');
+  } catch (err) {
+    hideLoading();
+    console.error("Error toggling ignore status for transaction:", err);
+  }
+};

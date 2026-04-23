@@ -403,7 +403,7 @@
       <!-- Top Branding -->
       <div class="login-hero">
         <div class="login-logo">
-          <img src="fundoinvisivel.png" alt="Logo" style="width: 100px; height: 100px; object-fit: contain;">
+          <img src="fundoinvisivel.png" alt="Logo" style="width: 150px; height: 150px; object-fit: contain;">
         </div>
         <h1 class="login-title">Agenda ViewGo</h1>
         <p class="login-sub" id="login-description" data-i18n="login_title">Sua agenda de trabalho inteligente</p>
@@ -708,7 +708,7 @@
                 <span class="material-symbols-outlined">chevron_left</span>
               </button>
 
-              <h2 id="month-title" class="cal-title" style="width: 200px !important; text-align: center;"></h2>
+              <h2 id="month-title" class="cal-title" style="min-width: 350px !important; text-align: center;"></h2>
 
               <button id="btn-next-month" class="btn btn-ghost btn-icon-sm">
                 <span class="material-symbols-outlined">chevron_right</span>
@@ -725,19 +725,19 @@
               style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 10px 14px; padding-right: 28px; background: var(--surface); border-bottom: 1px solid var(--border);">
               <div
                 style="background: #eef2ff; padding: 8px; border-radius: 12px; text-align: center; border: 1px solid #c7d2fe;">
-                <div style="font-size: 0.6rem; color: #4338ca; text-transform: uppercase; font-weight: 700;"
+                <div style="font-size: 0.9rem; color: #4338ca; text-transform: uppercase; font-weight: 700;"
                   data-i18n="finance_income">Receitas</div>
                 <div id="glb-total-income" style="font-size: 0.85rem; font-weight: 800; color: #1e1b4b;">R$ 0,00</div>
               </div>
               <div
                 style="background: #fff1f2; padding: 8px; border-radius: 12px; text-align: center; border: 1px solid #fecdd3;">
-                <div style="font-size: 0.6rem; color: #be123c; text-transform: uppercase; font-weight: 700;"
+                <div style="font-size: 0.9rem; color: #be123c; text-transform: uppercase; font-weight: 700;"
                   data-i18n="finance_expenses">Despesas</div>
                 <div id="glb-total-expenses" style="font-size: 0.85rem; font-weight: 800; color: #4c0519;">R$ 0,00</div>
               </div>
               <div
                 style="background: #f0fdf4; padding: 8px; border-radius: 12px; text-align: center; border: 1px solid #bbf7d0;">
-                <div style="font-size: 0.6rem; color: #15803d; text-transform: uppercase; font-weight: 700;"
+                <div style="font-size: 0.9rem; color: #15803d; text-transform: uppercase; font-weight: 700;"
                   data-i18n="finance_balance">Saldo</div>
                 <div id="glb-total-balance" style="font-size: 0.85rem; font-weight: 800; color: #052e16;">R$ 0,00</div>
               </div>
@@ -792,14 +792,14 @@
 
   <!-- ===== MODAL ONBOARDING SOUND ===== -->
   <div id="modal-onboarding-sound" class="modal-overlay hidden">
-    <div class="modal-body modal-sheet">
+    <div class="modal-sheet modal-sheet-auto">
       <div class="modal-handle"></div>
       <div class="modal-header">
         <h3 data-i18n="modal_sound_title">Sons da Agenda</h3>
       </div>
-      <div class="modal-content" style="text-align: center; padding: 20px;">
+      <div class="modal-body text-center">
         <div
-          style="width: 64px; height: 64px; background: var(--primary-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+          style="width: 64px; height: 64px; background: var(--primary-lt); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
           <span class="material-symbols-outlined" style="font-size: 32px; color: var(--primary);">volume_up</span>
         </div>
         <p data-i18n="modal_sound_body" style="color: var(--text2); line-height: 1.5; margin-bottom: 24px;"></p>
@@ -1042,6 +1042,14 @@
               </button>
             </div>
           </div>
+          <div id="event-recurring-options" class="hidden"
+            style="margin-top: 8px; margin-bottom: 8px; padding: 12px; background: var(--surface2); border: 1px dashed var(--border); border-radius: var(--radius-sm);">
+            <button type="button" id="btn-ignore-event-instance" class="btn btn-outline btn-sm btn-full"
+              style="color: var(--danger); border-color: var(--danger-lt);">
+              <span class="material-symbols-outlined" style="font-size: 18px; margin-right: 6px;">event_busy</span>
+              <span data-i18n="btn_ignore_instance">Desconsiderar neste dia</span>
+            </button>
+          </div>
           <div class="field-group">
             <label class="field-label" data-i18n="evt_recurrence_label">Recorrência</label>
             <select id="evt-recurrence" class="field-input field-select">
@@ -1129,6 +1137,32 @@
             data-i18n="btn_cancel">Cancelar</button>
           <button type="button" id="btn-agree-confirm" class="btn btn-danger flex-1"
             data-i18n="btn_delete">Confirma</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECURRING EDIT CHOICE MODAL -->
+  <div id="modal-recurrence-choice" class="modal-overlay hidden" style="z-index: 10001;">
+    <div class="modal-sheet modal-sheet-auto">
+      <div class="modal-handle"></div>
+      <div class="modal-body text-center" style="padding-top: 10px;">
+        <div class="confirm-icon"
+          style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+          <span class="material-symbols-outlined" style="font-size: 32px;">rule</span>
+        </div>
+        <h3 data-i18n="confirm_recurrence_edit_title"
+          style="margin-bottom: 8px; font-size: 1.2rem; font-weight: 800; color: var(--text);">Editar Repetição</h3>
+        <p data-i18n="confirm_recurrence_edit_desc"
+          style="font-size: 0.9rem; color: var(--text2); margin-bottom: 24px;">Deseja aplicar as edições em todas as
+          ocorrências desta série ou somente nesta data específica?</p>
+        <div style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+          <button type="button" id="btn-save-recurring-all" class="btn btn-primary btn-full"
+            data-i18n="btn_apply_all">Toda a Série</button>
+          <button type="button" id="btn-save-recurring-instance" class="btn btn-outline btn-full"
+            data-i18n="btn_apply_instance">Somente nesta</button>
+          <button type="button" id="btn-cancel-recurring-choice" class="btn btn-ghost btn-full" data-i18n="btn_cancel"
+            style="color: var(--text3);">Cancelar</button>
         </div>
       </div>
     </div>
@@ -1232,12 +1266,16 @@
         <form id="transaction-form" style="display: flex; flex-direction: column; gap: 16px;">
           <div class="field-row">
             <div class="field-group flex-1">
-              <label class="field-label" data-i18n="finance_type_income">Tipo</label>
+              <label class="field-label" data-i18n="finance_type_select">Defina o tipo de transação</label>
               <div class="view-switcher" style="width:100%">
-                <button type="button" id="trans-type-income" class="view-btn flex-1 active"
-                  data-i18n="finance_type_income">Receita</button>
-                <button type="button" id="trans-type-expense" class="view-btn flex-1"
-                  data-i18n="finance_type_expense">Despesa</button>
+                <button type="button" id="trans-type-income" class="view-btn flex-1 active">
+                  <span class="material-symbols-outlined">trending_up</span>
+                  <span data-i18n="finance_type_income">Receita</span>
+                </button>
+                <button type="button" id="trans-type-expense" class="view-btn flex-1">
+                  <span class="material-symbols-outlined">trending_down</span>
+                  <span data-i18n="finance_type_expense">Despesa</span>
+                </button>
               </div>
             </div>
           </div>
@@ -1258,10 +1296,20 @@
             </div>
           </div>
 
+          <div id="trans-recurring-options" class="hidden"
+            style="margin-top: 8px; margin-bottom: 8px; padding: 12px; background: var(--surface2); border: 1px dashed var(--border); border-radius: var(--radius-sm);">
+            <button type="button" id="btn-ignore-trans-instance" class="btn btn-outline btn-sm btn-full"
+              style="color: var(--danger); border-color: var(--danger-lt);">
+              <span class="material-symbols-outlined" style="font-size: 18px; margin-right: 6px;">event_busy</span>
+              <span data-i18n="btn_ignore_instance">Desconsiderar neste dia</span>
+            </button>
+          </div>
           <div class="field-group">
             <label class="field-label" data-i18n="evt_recurrence_label">Recorrência</label>
             <select id="trans-recurrence" class="field-input field-select">
               <option value="none" data-i18n="recurrence_none">Não se repete</option>
+              <option value="daily" data-i18n="recurrence_daily">Diariamente</option>
+              <option value="weekly" data-i18n="recurrence_weekly">Semanalmente</option>
               <option value="monthly" data-i18n="recurrence_monthly">Mensalmente</option>
               <option value="yearly" data-i18n="recurrence_yearly">Anualmente</option>
             </select>
