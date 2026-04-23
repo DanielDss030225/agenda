@@ -612,7 +612,11 @@ function getEventsForDate(d) {
     if (targetDate < start) return;
 
     if (e.date === targetStr) {
-      result.push({ ...e, isIgnored: !!(e.excludedDates && e.excludedDates[targetStr]), occurrenceDate: targetStr });
+      let finalItem = { ...e, isIgnored: !!(e.excludedDates && e.excludedDates[targetStr]), occurrenceDate: targetStr };
+      if (e.overrides && e.overrides[targetStr]) {
+        finalItem = { ...finalItem, ...e.overrides[targetStr] };
+      }
+      result.push(finalItem);
       return;
     }
 
@@ -1136,19 +1140,63 @@ function openDayModal(d) {
   const evList = $('day-events-list');
   evList.innerHTML = evs.length ? '' : `<p class="empty-state">${typeof i18n !== 'undefined' ? i18n.t('search_no_results') : 'Sem eventos'}</p>`;
   evs.forEach(ev => {
+    const color = catColor(ev.category || 'evento');
+    const iconName = ({ evento: 'event', aniversario: 'cake', trabalho: 'work', pessoal: 'person', saude: 'favorite', estudo: 'school' })[ev.category] || 'event';
+    
     const div = document.createElement('div');
     div.className = 'event-item';
-    div.style = `padding:10px; background:var(--surface); border:1px solid var(--border); border-radius:12px; margin-bottom:10px; cursor:pointer; opacity: ${ev.isIgnored ? '0.4' : '1'};`;
+    div.style = `
+      position: relative;
+      padding: 12px 16px;
+      padding-left: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid ${color};
+      border-radius: 16px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      opacity: ${ev.isIgnored ? '0.5' : '1'};
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+      transition: transform 0.2s, box-shadow 0.2s;
+    `;
+    
     div.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-        <div style="flex:1;">
-          <div class="event-item-title" style="font-size:0.9rem; font-weight:700; color:var(--text); text-decoration: ${ev.isIgnored ? 'line-through' : 'none'};">${ev.title}</div>
-          <div style="font-size:0.7rem; color:var(--text2); font-weight:600;">${ev.time || ''}</div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+        <div style="display:flex; align-items:center; gap:10px; flex: 1; overflow: hidden;">
+          <span class="material-symbols-outlined" style="font-size:20px; color:${color}; flex-shrink: 0;">${iconName}</span>
+          <div class="event-item-title" style="font-size:1.05rem; font-weight:800; color:var(--text); text-decoration: ${ev.isIgnored ? 'line-through' : 'none'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            ${ev.title}
+          </div>
         </div>
-        ${ev.isIgnored ? '<span class="material-symbols-outlined" style="font-size: 16px; color: var(--text3);">event_busy</span>' : ''}
+        
+        ${ev.time ? `
+          <div style="display:flex; align-items:center; gap:4px; font-size:0.8rem; color:var(--primary); font-weight:700; background: var(--primary-lt); padding: 4px 10px; border-radius: 20px; flex-shrink: 0; margin-left: 10px;">
+            <span class="material-symbols-outlined" style="font-size:14px;">schedule</span>
+            ${ev.time}
+          </div>
+        ` : ''}
       </div>
-      ${ev.description ? `<div style="font-size:0.9rem; color:var(--text2); margin-top:4px; line-height:1.4;">${ev.description}</div>` : ''}
-      <div style="font-size:0.65rem; color:var(--text3); margin-top:6px; font-style:italic;">${new Date(ev.date + 'T12:00:00').toLocaleDateString()}</div>
+
+      ${ev.description ? `
+        <div style="font-size:0.85rem; color:var(--text2); line-height:1.5; background: rgba(0,0,0,0.02); padding: 10px; border-radius: 12px; margin-bottom: 8px; border-left: 2px solid var(--border);">
+          ${ev.description}
+        </div>
+      ` : ''}
+      
+      <div style="display:flex; justify-content:between; align-items:center; margin-top:4px;">
+         <div style="flex:1;">
+            ${ev.isIgnored ? `
+              <div style="display:flex; align-items:center; gap:4px; color:var(--danger); font-size:0.7rem; font-weight:700;">
+                <span class="material-symbols-outlined" style="font-size:14px;">event_busy</span>
+                DESCONSIDERADO
+              </div>
+            ` : ''}
+         </div>
+         <div style="display:flex; align-items:center; gap:4px; opacity: 0.5;">
+            <span class="material-symbols-outlined" style="font-size:12px;">calendar_today</span>
+            <span style="font-size:0.65rem; font-weight:600;">${new Date(ev.date + 'T12:00:00').toLocaleDateString()}</span>
+         </div>
+      </div>
     `;
     div.onclick = () => { closeModal('modal-day'); S.editingEventId = ev.id; openEventForm(ev, d); };
     evList.appendChild(div);
@@ -1160,23 +1208,48 @@ function openDayModal(d) {
   trList.innerHTML = trs.length ? '' : `<p class="empty-state">${typeof i18n !== 'undefined' ? i18n.t('finance_empty') : 'Sem finanças'}</p>`;
   trs.forEach(t => {
     const isChecked = !!t.checked;
+    const color = t.type === 'income' ? '#16a34a' : '#dc2626';
+    const bgColor = t.type === 'income' ? '#dcfce7' : '#fee2e2';
+    
     const div = document.createElement('div');
     div.className = 'finance-item' + (isChecked ? ' checked' : '');
-    div.style = `display:flex; align-items:center; gap:10px; padding:8px; background:var(--bg); border:1px solid var(--border); border-radius:12px; margin-bottom:6px; cursor:pointer; opacity: ${t.isIgnored ? '0.4' : (isChecked ? '0.6' : '1')}; transition: all 0.2s;`;
+    div.style = `
+      display:flex; 
+      align-items:center; 
+      gap:12px; 
+      padding: 12px 16px; 
+      background: var(--surface); 
+      border: 1px solid var(--border); 
+      border-radius: 16px; 
+      margin-bottom: 8px; 
+      cursor:pointer; 
+      opacity: ${t.isIgnored ? '0.4' : (isChecked ? '0.7' : '1')}; 
+      box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+      transition: all 0.2s;
+    `;
+    
     div.innerHTML = `
-      <button class="btn btn-ghost btn-icon-sm" onclick="window.toggleTransactionStatus('${t.id}', event)" style="color: ${isChecked ? 'var(--primary)' : 'var(--text3)'}; padding: 0; width: 24px; height: 24px;">
-        <span class="material-symbols-outlined" style="font-size:20px; font-variation-settings: 'FILL' ${isChecked ? 1 : 0}">${isChecked ? 'check_circle' : 'radio_button_unchecked'}</span>
+      <button class="btn btn-ghost btn-icon-sm" onclick="window.toggleTransactionStatus('${t.id}', event)" style="color: ${isChecked ? 'var(--primary)' : 'var(--text3)'}; padding: 0; width: 32px; height: 32px; flex-shrink: 0;">
+        <span class="material-symbols-outlined" style="font-size:24px; font-variation-settings: 'FILL' ${isChecked ? 1 : 0}">${isChecked ? 'check_circle' : 'radio_button_unchecked'}</span>
       </button>
-      <div style="background:${t.type === 'income' ? '#dcfce7' : '#fee2e2'}; color:${t.type === 'income' ? '#166534' : '#991b1b'}; width:24px; height:24px; border-radius:6px; display:flex; align-items:center; justify-content:center;">
-        <span class="material-symbols-outlined" style="font-size:14px;">${t.type === 'income' ? 'trending_up' : 'trending_down'}</span>
+      
+      <div style="background:${bgColor}; color:${color}; width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink: 0;">
+        <span class="material-symbols-outlined" style="font-size:20px;">${t.type === 'income' ? 'trending_up' : 'trending_down'}</span>
       </div>
-      <div style="flex:1;">
-        <div style="font-size:0.9rem; font-weight:700; color:var(--text); text-decoration: ${(isChecked || t.isIgnored) ? 'line-through' : 'none'};">${t.desc}</div>
+      
+      <div style="flex:1; overflow: hidden;">
+        <div style="font-size:0.95rem; font-weight:750; color:var(--text); text-decoration: ${(isChecked || t.isIgnored) ? 'line-through' : 'none'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          ${t.desc}
+        </div>
+        <div style="font-size:0.75rem; color:var(--text3); font-weight:600;">${t.type === 'income' ? 'Receita' : 'Despesa'}</div>
       </div>
-      <div style="font-size:0.9rem; font-weight:700; color:${t.type === 'income' ? '#16a34a' : '#dc2626'}; text-align:right; text-decoration: ${(isChecked || t.isIgnored) ? 'line-through' : 'none'};">
-        ${t.type === 'income' ? '+' : '-'} ${formatVal(t.amount)}
+      
+      <div style="text-align:right; flex-shrink: 0;">
+        <div style="font-size:1rem; font-weight:800; color:${color}; text-decoration: ${(isChecked || t.isIgnored) ? 'line-through' : 'none'};">
+          ${t.type === 'income' ? '+' : '-'} ${formatVal(t.amount)}
+        </div>
+        ${t.isIgnored ? '<span class="material-symbols-outlined" style="font-size: 16px; color: var(--text3); display: block; margin-left: auto;">event_busy</span>' : ''}
       </div>
-      ${t.isIgnored ? '<span class="material-symbols-outlined" style="font-size: 16px; color: var(--text3);">event_busy</span>' : ''}
     `;
     div.onclick = (e) => {
       if (e.target.closest('button')) return;
@@ -1204,48 +1277,48 @@ function openEventForm(evt, clickedDate = null) {
   S.editingEventId = isNew ? null : evt.id;
   S.editingOccurrenceDate = clickedDate ? toDateStr(clickedDate) : (evt ? evt.date : toDateStr(new Date()));
   const t = (k) => typeof i18n !== 'undefined' ? i18n.t(k) : k;
+  
   $('event-modal-title').textContent = evt ? t('edit_event') : t('new_event');
   $('evt-title').value = evt?.title || '';
   $('evt-desc').value = evt?.description || '';
   $('evt-time').value = evt?.time || '';
-  // Se for uma ocorrência recorrente aberta do modal do dia, usamos a data do dia (d)
-  const displayDate = d || (event?.date ? new Date(event.date + 'T12:00:00') : (S.selectedDate || new Date()));
+  
+  const displayDate = clickedDate || (evt?.date ? new Date(evt.date + 'T12:00:00') : (S.selectedDate || new Date()));
   $('evt-date').value = toDateStr(displayDate);
-  $('evt-recurrence').value = event?.recurrence || 'none';
-  document.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === (event?.category || 'evento')));
-  if (event) show('btn-delete-event'); else hide('btn-delete-event');
+  $('evt-recurrence').value = evt?.recurrence || 'none';
+  
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === (evt?.category || 'evento')));
+  
+  if (evt) show('btn-delete-event'); else hide('btn-delete-event');
   updateWorkBadge($('evt-date').value);
 
-  // Mostrar botão de "Desconsiderar" para qualquer item recorrente
-  if (event) {
-    const recArea = $('event-recurring-options');
-    const btnIgnore = $('btn-ignore-event-instance');
-    if (recArea && btnIgnore) {
-      if (event.recurrence && event.recurrence !== 'none') {
-        recArea.classList.remove('hidden');
-        // Toggle texto conforme estado e recorrência
-        const isIgnored = event.excludedDates && event.excludedDates[$('evt-date').value];
-        const recType = event.recurrence || 'daily';
-        const i18nKey = (isIgnored ? 'consider_instance_' : 'ignore_instance_') + recType;
-        
-        const span = btnIgnore.querySelector('[data-i18n]');
-        if (span) {
-          span.setAttribute('data-i18n', i18nKey);
-          if (typeof i18n !== 'undefined') span.innerHTML = i18n.t(i18nKey);
-        }
-        if (typeof i18n !== 'undefined') i18n.applyToDOM();
-        
-        btnIgnore.style.color = isIgnored ? 'var(--primary)' : 'var(--danger)';
-        btnIgnore.style.borderColor = isIgnored ? 'var(--primary-lt)' : 'var(--danger-lt)';
-        const icon = btnIgnore.querySelector('.material-symbols-outlined');
-        if (icon) icon.textContent = isIgnored ? 'event_available' : 'event_busy';
-      } else {
-        recArea.classList.add('hidden');
+  const recArea = $('event-recurring-options');
+  const btnIgnore = $('btn-ignore-event-instance');
+  
+  if (evt && recArea && btnIgnore) {
+    if (evt.recurrence && evt.recurrence !== 'none') {
+      recArea.classList.remove('hidden');
+      const isIgnored = evt.excludedDates && evt.excludedDates[$('evt-date').value];
+      const recType = evt.recurrence || 'daily';
+      const i18nKey = (isIgnored ? 'consider_instance_' : 'ignore_instance_') + recType;
+      
+      const span = btnIgnore.querySelector('[data-i18n]');
+      if (span) {
+        span.setAttribute('data-i18n', i18nKey);
+        if (typeof i18n !== 'undefined') span.innerHTML = i18n.t(i18nKey);
       }
+      if (typeof i18n !== 'undefined') i18n.applyToDOM();
+      
+      btnIgnore.style.color = isIgnored ? 'var(--primary)' : 'var(--danger)';
+      btnIgnore.style.borderColor = isIgnored ? 'var(--primary-lt)' : 'var(--danger-lt)';
+      const icon = btnIgnore.querySelector('.material-symbols-outlined');
+      if (icon) icon.textContent = isIgnored ? 'event_available' : 'event_busy';
+    } else {
+      recArea.classList.add('hidden');
     }
   } else {
-    // Modo Novo
-    if ($('event-recurring-options')) $('event-recurring-options').classList.add('hidden');
+    // Modo Novo ou elementos não encontrados
+    if (recArea) recArea.classList.add('hidden');
   }
 
   openModal('modal-event');
@@ -1282,19 +1355,16 @@ async function saveEventForm(e) {
   if (!date) return;
 
   isSavingEvent = true;
-  showLoading('loading_saving');
   const data = { title, date, description: $('evt-desc').value.trim(), time: $('evt-time').value, category: document.querySelector('.cat-btn.active')?.dataset.cat || 'evento', recurrence: $('evt-recurrence').value };
   
   const original = S.editingEventId ? S.events.find(e => e.id === S.editingEventId) : null;
   const isRecurring = original && original.recurrence && original.recurrence !== 'none';
-  // O bug era aqui: agora permitimos a escolha sempre que for recorrente
   const shouldAsk = isRecurring; 
   const isEditingVirtual = isRecurring && S.editingOccurrenceDate !== original.date;
 
   const performAllSave = async () => {
     showLoading('loading_saving');
     const saveData = { ...data };
-    // BUG FIX: Mantém a data original da série se for um "Salvar Todos" vindo de repetição
     if (isEditingVirtual && original) {
        saveData.date = original.date;
     }
@@ -1306,13 +1376,12 @@ async function saveEventForm(e) {
     try {
       showLoading('loading_saving');
       if (original) {
-        // Em vez de criar novo item, adicionamos aos 'overrides' do original
         const overrideData = {
           title: data.title,
           description: data.description,
           time: data.time,
           category: data.category,
-          date: data.date // Permite mudar a data da ocorrência específica (opcional)
+          date: data.date 
         };
         if (!original.overrides) original.overrides = {};
         original.overrides[S.editingOccurrenceDate] = overrideData;
@@ -1323,6 +1392,7 @@ async function saveEventForm(e) {
       console.error("Erro ao salvar sobreposição:", err);
       alert("Erro ao aplicar edição específica.");
       hideLoading();
+      isSavingEvent = false;
     }
   };
 
@@ -1338,9 +1408,12 @@ async function saveEventForm(e) {
   if (shouldAsk) {
     window.showRecurrenceChoiceModal(performInstanceSave, performAllSave);
     isSavingEvent = false; 
-  } else {
-    await performAllSave();
+    return;
   }
+
+  showLoading('loading_saving');
+  if (S.editingEventId) await updateEvent(S.editingEventId, data); else await addEvent(data);
+  finishSave();
 }
 
 // Limpar erro ao digitar
