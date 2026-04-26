@@ -343,39 +343,39 @@ function updateStepDots() {
 let _recoveryCountdownTimer = null;
 
 window.toggleRecovery = function (show) {
-  const loginForm   = $('login-form');
-  const recoveryEl  = $('recovery-area');
-  const formState   = $('recovery-form-state');
+  const loginForm = $('login-form');
+  const recoveryEl = $('recovery-area');
+  const formState = $('recovery-form-state');
   const successState = $('recovery-success-state');
 
   if (show) {
-    if (loginForm)   loginForm.classList.add('hidden');
-    if (recoveryEl)  recoveryEl.classList.remove('hidden');
+    if (loginForm) loginForm.classList.add('hidden');
+    if (recoveryEl) recoveryEl.classList.remove('hidden');
     // Always start at form state
-    if (formState)   formState.classList.remove('hidden');
+    if (formState) formState.classList.remove('hidden');
     if (successState) successState.classList.add('hidden');
     const inp = $('inp-recovery-email');
     if (inp) { inp.value = ''; setTimeout(() => inp.focus(), 120); }
   } else {
-    if (loginForm)   loginForm.classList.remove('hidden');
-    if (recoveryEl)  recoveryEl.classList.add('hidden');
+    if (loginForm) loginForm.classList.remove('hidden');
+    if (recoveryEl) recoveryEl.classList.add('hidden');
     // Clear countdown
     if (_recoveryCountdownTimer) { clearInterval(_recoveryCountdownTimer); _recoveryCountdownTimer = null; }
   }
   const errEl = $('login-error');
   const recErr = $('recovery-error');
-  if (errEl)  errEl.textContent  = '';
+  if (errEl) errEl.textContent = '';
   if (recErr) recErr.textContent = '';
 };
 
 function _startResendCountdown(seconds = 60) {
   const countdownWrap = $('recovery-countdown-wrap');
-  const resendWrap    = $('recovery-resend-wrap');
-  const countdownNum  = $('recovery-countdown');
+  const resendWrap = $('recovery-resend-wrap');
+  const countdownNum = $('recovery-countdown');
 
   if (countdownWrap) countdownWrap.classList.remove('hidden');
-  if (resendWrap)    resendWrap.classList.add('hidden');
-  if (countdownNum)  countdownNum.textContent = seconds;
+  if (resendWrap) resendWrap.classList.add('hidden');
+  if (countdownNum) countdownNum.textContent = seconds;
 
   if (_recoveryCountdownTimer) clearInterval(_recoveryCountdownTimer);
   let remaining = seconds;
@@ -386,7 +386,7 @@ function _startResendCountdown(seconds = 60) {
       clearInterval(_recoveryCountdownTimer);
       _recoveryCountdownTimer = null;
       if (countdownWrap) countdownWrap.classList.add('hidden');
-      if (resendWrap)    resendWrap.classList.remove('hidden');
+      if (resendWrap) resendWrap.classList.remove('hidden');
     }
   }, 1000);
 }
@@ -395,7 +395,7 @@ async function sendRecoveryEmail() {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const email = ($('inp-recovery-email')?.value || '').trim();
   const errEl = $('recovery-error');
-  const btn   = $('btn-send-recovery');
+  const btn = $('btn-send-recovery');
 
   if (errEl) errEl.textContent = '';
 
@@ -417,9 +417,9 @@ async function sendRecoveryEmail() {
     hideLoading();
 
     // Show success state
-    const formState    = $('recovery-form-state');
+    const formState = $('recovery-form-state');
     const successState = $('recovery-success-state');
-    if (formState)    formState.classList.add('hidden');
+    if (formState) formState.classList.add('hidden');
     if (successState) successState.classList.remove('hidden');
 
     // Show masked email in subtitle
@@ -442,8 +442,8 @@ async function sendRecoveryEmail() {
     hideLoading();
     if (btn) { btn.disabled = false; btn.style.opacity = ''; }
     let msg = error.message || i18n.t('login_err_conn');
-    if (error.code === 'auth/user-not-found')  msg = i18n.t('recovery_err_not_found') || 'Nenhuma conta encontrada com este e-mail.';
-    if (error.code === 'auth/invalid-email')   msg = i18n.t('err_invalid_email');
+    if (error.code === 'auth/user-not-found') msg = i18n.t('recovery_err_not_found') || 'Nenhuma conta encontrada com este e-mail.';
+    if (error.code === 'auth/invalid-email') msg = i18n.t('err_invalid_email');
     if (error.code === 'auth/too-many-requests') msg = i18n.t('recovery_err_too_many') || 'Muitas tentativas. Aguarde alguns minutos.';
     if (errEl) errEl.textContent = msg;
   }
@@ -777,7 +777,7 @@ function getTransactionsForDate(d) {
     if (targetDate < start) return;
 
     if (t.date === targetStr) {
-      let finalItem = { ...t, isIgnored: !!(t.excludedDates && t.excludedDates[targetStr]), occurrenceDate: targetStr };
+      let finalItem = { ...t, isIgnored: !!(t.excludedDates && t.excludedDates[targetStr]), occurrenceDate: targetStr, currentInstallment: 1 };
       if (t.overrides && t.overrides[targetStr]) {
         finalItem = { ...finalItem, ...t.overrides[targetStr] };
       }
@@ -788,20 +788,55 @@ function getTransactionsForDate(d) {
     if (!t.recurrence || t.recurrence === 'none') return;
 
     let isOccurrence = false;
-    if (t.recurrence === 'daily') isOccurrence = true;
+    let currentInstallment = 0;
+
+    if (t.recurrence === 'daily') {
+      isOccurrence = true;
+      const diffDays = Math.round((targetDate - start) / 86400000);
+      currentInstallment = diffDays + 1;
+    }
     else if (t.recurrence === 'weekly') {
       const diffDays = Math.round((targetDate - start) / 86400000);
       isOccurrence = diffDays % 7 === 0;
+      currentInstallment = Math.floor(diffDays / 7) + 1;
     }
     else if (t.recurrence === 'monthly') {
-      isOccurrence = targetDate.getDate() === start.getDate();
+      const targetMonth = targetDate.getMonth();
+      const targetYear = targetDate.getFullYear();
+      const startDay = start.getDate();
+      const daysInTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+      const effectiveDay = Math.min(startDay, daysInTargetMonth);
+
+      isOccurrence = targetDate.getDate() === effectiveDay;
+      if (isOccurrence) {
+        currentInstallment = (targetYear - start.getFullYear()) * 12 + (targetMonth - start.getMonth()) + 1;
+      }
     }
     else if (t.recurrence === 'yearly') {
-      isOccurrence = targetDate.getDate() === start.getDate() && targetDate.getMonth() === start.getMonth();
+      const targetMonth = targetDate.getMonth();
+      const targetYear = targetDate.getFullYear();
+      const startMonth = start.getMonth();
+      const startDay = start.getDate();
+      
+      if (targetMonth === startMonth) {
+        const daysInTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+        const effectiveDay = Math.min(startDay, daysInTargetMonth);
+        isOccurrence = targetDate.getDate() === effectiveDay;
+        
+        if (isOccurrence) {
+          currentInstallment = targetYear - start.getFullYear() + 1;
+        }
+      }
+    }
+
+    if (t.installments > 0) {
+      if (currentInstallment > t.installments || currentInstallment < 1) {
+        isOccurrence = false;
+      }
     }
 
     if (isOccurrence) {
-      let finalItem = { ...t, isIgnored: !!(t.excludedDates && t.excludedDates[targetStr]), occurrenceDate: targetStr };
+      let finalItem = { ...t, isIgnored: !!(t.excludedDates && t.excludedDates[targetStr]), occurrenceDate: targetStr, currentInstallment };
       if (t.overrides && t.overrides[targetStr]) {
         finalItem = { ...finalItem, ...t.overrides[targetStr] };
       }
@@ -854,6 +889,7 @@ function openModal(id) {
 }
 
 function closeModal(id) {
+  console.log("debug: fechou side-menu");
   const el = $(id); if (!el) return;
 
   const sheet = el.querySelector('.modal-sheet');
@@ -896,9 +932,15 @@ window.closeAnyModal = () => {
   ['modal-day', 'modal-event', 'modal-search', 'modal-scale', 'modal-logout', 'modal-onboarding-sound', 'modal-bible', 'modal-lang', 'modal-finances', 'modal-transaction', 'modal-confirm', 'modal-recurrence-choice'].forEach(closeModal);
 };
 
-window.showRecurrenceChoiceModal = function (onOnlyThis, onAll) {
+window.showRecurrenceChoiceModal = function (onOnlyThis, onAll, hideOnlyThis = false) {
   play('click');
   if (typeof i18n !== 'undefined') i18n.applyToDOM();
+
+  const btnOnlyThis = $('btn-save-recurring-instance');
+  if (btnOnlyThis) {
+    if (hideOnlyThis) btnOnlyThis.classList.add('hidden');
+    else btnOnlyThis.classList.remove('hidden');
+  }
 
   $('btn-save-recurring-all').onclick = () => {
     closeModal('modal-recurrence-choice');
@@ -1379,7 +1421,7 @@ function openDayModal(d) {
       
       <div style="flex:1; overflow: hidden;">
         <div style="font-size:0.95rem; font-weight:750; color:var(--text); text-decoration: ${(isChecked || t.isIgnored) ? 'line-through' : 'none'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-          ${truncate(t.desc)}
+          ${truncate(t.desc)} ${t.installments > 0 ? `<span style="font-size:0.75rem; color:var(--text3); font-weight:600; margin-left:4px;">(${t.currentInstallment}/${t.installments})</span>` : ''}
         </div>
         <div style="font-size:0.75rem; color:var(--text3); font-weight:600;">${t.type === 'income' ? 'Receita' : 'Despesa'}</div>
       </div>
@@ -2042,6 +2084,20 @@ document.addEventListener('DOMContentLoaded', () => {
   if ($('trans-type-income')) $('trans-type-income').onclick = () => { window.setTransType('income'); play('click'); };
   if ($('trans-type-expense')) $('trans-type-expense').onclick = () => { window.setTransType('expense'); play('click'); };
 
+  if ($('trans-recurrence')) {
+    $('trans-recurrence').addEventListener('change', (e) => {
+      const gInsts = $('group-installments');
+      if (gInsts) {
+        if (e.target.value === 'none') {
+          gInsts.classList.add('hidden');
+          $('trans-installments').value = '';
+        } else {
+          gInsts.classList.remove('hidden');
+        }
+      }
+    });
+  }
+
   if ($('transaction-form')) {
     let isSavingTrans = false;
     $('transaction-form').onsubmit = async (e) => {
@@ -2059,183 +2115,199 @@ document.addEventListener('DOMContentLoaded', () => {
         desc: transDescValue,
         amount: transAmount,
         date: transDateValue,
-        recurrence: $('trans-recurrence')?.value || 'none'
+        recurrence: $('trans-recurrence')?.value || 'none',
+        installments: parseInt($('trans-installments')?.value) || 0
       };
 
       const original = S.editingTransactionId ? S.transactions.find(t => t.id === S.editingTransactionId) : null;
       const isRecurring = original && original.recurrence && original.recurrence !== 'none';
-      const shouldAsk = isRecurring;
-      const isEditingVirtual = isRecurring && S.editingOccurrenceDate !== original.date;
+      let shouldAsk = isRecurring;
+      let hideOnlyThis = false;
 
-      const finishTransSave = () => {
-        S.lastRenderedYear = null;
-        refreshCalendar();
-        if (!$('modal-finances').classList.contains('hidden')) updateFinanceUI();
-        hideLoading();
-        closeModal('modal-transaction');
-        setTimeout(() => isSavingTrans = false, 500);
-      };
+        if(original) {
+          const recurrenceChanged = (saveDataLocal.recurrence !== original.recurrence || saveDataLocal.installments !== (original.installments || 0));
+          const mainPropsSame = (saveDataLocal.desc === original.desc && saveDataLocal.amount === original.amount && saveDataLocal.type === original.type && saveDataLocal.date === original.date);
 
-      const performAllSave = async () => {
-        showLoading('loading_saving');
-        const finalData = { ...saveDataLocal };
-        if (isEditingVirtual && original) {
-          finalData.date = original.date;
-        }
-        const idx = S.transactions.findIndex(t => t.id === transId);
-        if (idx !== -1) S.transactions[idx] = finalData; else S.transactions.push(finalData);
-        await userRef(`transactions/${transId}`).set(finalData);
-        finishTransSave();
-      };
-
-      const performInstanceSave = async () => {
-        try {
-          showLoading('loading_saving');
-          if (original) {
-            const overrideData = {
-              desc: saveDataLocal.desc,
-              amount: saveDataLocal.amount,
-              type: saveDataLocal.type,
-              date: saveDataLocal.date
-            };
-            if (!original.overrides) original.overrides = {};
-            original.overrides[S.editingOccurrenceDate] = overrideData;
-            await userRef(`transactions/${original.id}/overrides/${S.editingOccurrenceDate}`).set(overrideData);
+          if (recurrenceChanged) {
+            hideOnlyThis = true; // Não permite "Somente nesta" se a regra de repetição mudou
+            if (mainPropsSame) {
+              // Se alterou *apenas* a repetição/parcelas, aplica em todas direto pulando o modal
+              shouldAsk = false;
+            }
           }
-          finishTransSave();
-        } catch (err) {
-          console.error("Erro ao salvar sobreposição de transação:", err);
-          alert("Erro ao processar transação.");
+        }
+
+      const isEditingVirtual = isRecurring && S.editingOccurrenceDate !== original?.date;
+
+        const finishTransSave = () => {
+          S.lastRenderedYear = null;
+          refreshCalendar();
+          if (!$('modal-finances').classList.contains('hidden')) updateFinanceUI();
           hideLoading();
+          closeModal('modal-transaction');
+          setTimeout(() => isSavingTrans = false, 500);
+        };
+
+        const performAllSave = async () => {
+          showLoading('loading_saving');
+          const finalData = { ...saveDataLocal };
+          if (isEditingVirtual && original) {
+            finalData.date = original.date;
+          }
+          const idx = S.transactions.findIndex(t => t.id === transId);
+          if (idx !== -1) S.transactions[idx] = finalData; else S.transactions.push(finalData);
+          await userRef(`transactions/${transId}`).set(finalData);
+          finishTransSave();
+        };
+
+        const performInstanceSave = async () => {
+          try {
+            showLoading('loading_saving');
+            if (original) {
+              const overrideData = {
+                desc: saveDataLocal.desc,
+                amount: saveDataLocal.amount,
+                type: saveDataLocal.type,
+                date: saveDataLocal.date
+              };
+              if (!original.overrides) original.overrides = {};
+              original.overrides[S.editingOccurrenceDate] = overrideData;
+              await userRef(`transactions/${original.id}/overrides/${S.editingOccurrenceDate}`).set(overrideData);
+            }
+            finishTransSave();
+          } catch (err) {
+            console.error("Erro ao salvar sobreposição de transação:", err);
+            alert("Erro ao processar transação.");
+            hideLoading();
+          }
+        };
+
+        try {
+          if(shouldAsk) {
+            window.showRecurrenceChoiceModal(performInstanceSave, performAllSave, hideOnlyThis);
+            isSavingTrans = false;
+          } else {
+            isSavingTrans = true;
+            await performAllSave();
+          }
+        } catch (err) {
+          hideLoading();
+          console.error("Error saving transaction:", err);
+          alert("Erro ao salvar transação. Verifique sua conexão.");
+          isSavingTrans = false;
         }
       };
-
-      try {
-        if (shouldAsk) {
-          window.showRecurrenceChoiceModal(performInstanceSave, performAllSave);
-          isSavingTrans = false;
-        } else {
-          isSavingTrans = true;
-          await performAllSave();
-        }
-      } catch (err) {
-        hideLoading();
-        console.error("Error saving transaction:", err);
-        alert("Erro ao salvar transação. Verifique sua conexão.");
-        isSavingTrans = false;
-      }
-    };
   }
 
-  if ($('btn-add-fin-from-day')) {
-    $('btn-add-fin-from-day').onclick = () => {
-      console.log("[DEBUG] Botão 'Nova Transação' clicado");
-      play('click');
-      const d = S.selectedDate || new Date();
-      console.log("[DEBUG] Data selecionada:", d);
+if ($('btn-add-fin-from-day')) {
+  $('btn-add-fin-from-day').onclick = () => {
+    console.log("[DEBUG] Botão 'Nova Transação' clicado");
+    play('click');
+    const d = S.selectedDate || new Date();
+    console.log("[DEBUG] Data selecionada:", d);
 
-      console.log("[DEBUG] Tentando fechar modal-day");
-      closeModal('modal-day');
+    console.log("[DEBUG] Tentando fechar modal-day");
+    closeModal('modal-day');
 
-      console.log("[DEBUG] Chamando window.openTransactionForm");
-      window.openTransactionForm(d);
-    };
-  } else {
-    console.warn("[DEBUG] Elemento 'btn-add-fin-from-day' NÃO encontrado no DOM durante registro");
-  }
+    console.log("[DEBUG] Chamando window.openTransactionForm");
+    window.openTransactionForm(d);
+  };
+} else {
+  console.warn("[DEBUG] Elemento 'btn-add-fin-from-day' NÃO encontrado no DOM durante registro");
+}
 
-  if ($('btn-ignore-event-instance')) {
-    $('btn-ignore-event-instance').onclick = () => {
-      const dateStr = $('evt-date').value;
-      const eventId = S.editingEventId;
-      if (eventId && dateStr) window.ignoreEventInstance(eventId, dateStr);
-    };
-  }
+if ($('btn-ignore-event-instance')) {
+  $('btn-ignore-event-instance').onclick = () => {
+    const dateStr = $('evt-date').value;
+    const eventId = S.editingEventId;
+    if (eventId && dateStr) window.ignoreEventInstance(eventId, dateStr);
+  };
+}
 
-  if ($('btn-ignore-trans-instance')) {
-    $('btn-ignore-trans-instance').onclick = () => {
-      const dateStr = $('trans-date').value;
-      const transId = S.editingTransactionId;
-      if (transId && dateStr) window.ignoreTransactionInstance(transId, dateStr);
-    };
-  }
-  document.querySelectorAll('.modal-sheet').forEach(sheet => {
-    const overlay = sheet.parentElement;
-    const overlayId = overlay.id;
-    let startY = 0, currentY = 0, isDragging = false;
+if ($('btn-ignore-trans-instance')) {
+  $('btn-ignore-trans-instance').onclick = () => {
+    const dateStr = $('trans-date').value;
+    const transId = S.editingTransactionId;
+    if (transId && dateStr) window.ignoreTransactionInstance(transId, dateStr);
+  };
+}
+document.querySelectorAll('.modal-sheet').forEach(sheet => {
+  const overlay = sheet.parentElement;
+  const overlayId = overlay.id;
+  let startY = 0, currentY = 0, isDragging = false;
 
-    const startDrag = (e) => {
-      if (e.target.closest('button, input, select')) return;
+  const startDrag = (e) => {
+    if (e.target.closest('button, input, select')) return;
 
-      // Se clicou no overlay, só inicia se for NO FUNDO (área escura)
-      if (e.currentTarget === overlay && e.target !== overlay) return;
+    // Se clicou no overlay, só inicia se for NO FUNDO (área escura)
+    if (e.currentTarget === overlay && e.target !== overlay) return;
 
-      startY = e.clientY; currentY = 0;
-      isDragging = true;
-      sheet.style.transition = 'none';
-      window.addEventListener('pointermove', onMove);
-      window.addEventListener('pointerup', onUp);
-    };
+    startY = e.clientY; currentY = 0;
+    isDragging = true;
+    sheet.style.transition = 'none';
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
 
-    const onMove = (e) => {
-      if (!isDragging) return;
-      currentY = e.clientY - startY;
-      if (currentY > 0) {
-        e.preventDefault();
-        sheet.style.transform = `translateY(${currentY}px)`;
-      }
-    };
+  const onMove = (e) => {
+    if (!isDragging) return;
+    currentY = e.clientY - startY;
+    if (currentY > 0) {
+      e.preventDefault();
+      sheet.style.transform = `translateY(${currentY}px)`;
+    }
+  };
 
-    const onUp = (e) => {
-      if (!isDragging) return;
-      isDragging = false;
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
+  const onUp = (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
 
-      if (currentY < 10 && e.target === overlay) {
-        // Tratado pelo document.click global para evitar ghost clicks
-      } else if (currentY > 60) { // Arraste profundo
-        sheet.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 1, 1)';
-        sheet.style.transform = 'translateY(100%)';
-        setTimeout(() => closeModal(overlayId), 180);
-      } else { // Arraste curto (volta)
-        sheet.style.transition = 'transform 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28)';
-        sheet.style.transform = 'translateY(0)';
-      }
-      currentY = 0;
-    };
+    if (currentY < 10 && e.target === overlay) {
+      // Tratado pelo document.click global para evitar ghost clicks
+    } else if (currentY > 60) { // Arraste profundo
+      sheet.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 1, 1)';
+      sheet.style.transform = 'translateY(100%)';
+      setTimeout(() => closeModal(overlayId), 180);
+    } else { // Arraste curto (volta)
+      sheet.style.transition = 'transform 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28)';
+      sheet.style.transform = 'translateY(0)';
+    }
+    currentY = 0;
+  };
 
-    // Registrar alças: Barra cinza, Cabeçalho e o próprio Fundo (Overlay)
-    const handle = sheet.querySelector('.modal-handle');
-    const header = sheet.querySelector('.modal-header');
+  // Registrar alças: Barra cinza, Cabeçalho e o próprio Fundo (Overlay)
+  const handle = sheet.querySelector('.modal-handle');
+  const header = sheet.querySelector('.modal-header');
 
-    if (handle) handle.addEventListener('pointerdown', startDrag);
-    if (header) header.addEventListener('pointerdown', startDrag);
-    overlay.addEventListener('pointerdown', startDrag);
+  if (handle) handle.addEventListener('pointerdown', startDrag);
+  if (header) header.addEventListener('pointerdown', startDrag);
+  overlay.addEventListener('pointerdown', startDrag);
 
-    // Impedir que o toque dentro do conteúdo do modal cause conflito de scroll/drag no fundo
-    sheet.addEventListener('pointerdown', (e) => {
-      if (e.target !== handle && !header.contains(e.target)) e.stopPropagation();
-    }, { passive: true });
-  });
+  // Impedir que o toque dentro do conteúdo do modal cause conflito de scroll/drag no fundo
+  sheet.addEventListener('pointerdown', (e) => {
+    if (e.target !== handle && !header.contains(e.target)) e.stopPropagation();
+  }, { passive: true });
+});
 
-  // ---- Inteligência de Teclado (Mobile) ----
-  if (window.visualViewport) {
-    const vv = window.visualViewport;
-    const updateKeyboard = () => {
-      // Diferença entre a tela total e a área visível (teclado)
-      const h = window.innerHeight - vv.height;
-      document.documentElement.style.setProperty('--keyboard-h', (h > 60 ? h : 0) + 'px');
+// ---- Inteligência de Teclado (Mobile) ----
+if (window.visualViewport) {
+  const vv = window.visualViewport;
+  const updateKeyboard = () => {
+    // Diferença entre a tela total e a área visível (teclado)
+    const h = window.innerHeight - vv.height;
+    document.documentElement.style.setProperty('--keyboard-h', (h > 60 ? h : 0) + 'px');
 
-      // Auto-scroll para o campo focado
-      const active = document.activeElement;
-      if (h > 60 && active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
-        setTimeout(() => active.scrollIntoView({ block: 'center', behavior: 'smooth' }), 150);
-      }
-    };
-    vv.addEventListener('resize', updateKeyboard);
-    vv.addEventListener('scroll', updateKeyboard);
-  }
+    // Auto-scroll para o campo focado
+    const active = document.activeElement;
+    if (h > 60 && active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+      setTimeout(() => active.scrollIntoView({ block: 'center', behavior: 'smooth' }), 150);
+    }
+  };
+  vv.addEventListener('resize', updateKeyboard);
+  vv.addEventListener('scroll', updateKeyboard);
+}
 });
 // ======================== FINANCE LOGIC ========================
 function updateFinanceUI() {
@@ -2309,7 +2381,7 @@ function renderFinanceList(list) {
           <span class="material-symbols-outlined" style="font-size:18px;">${t.type === 'income' ? 'trending_up' : 'trending_down'}</span>
         </div>
         <div>
-          <div style="font-size:0.8rem; font-weight:700; color:var(--text); text-decoration: ${isChecked ? 'line-through' : 'none'};">${truncate(t.desc)}</div>
+          <div style="font-size:0.8rem; font-weight:700; color:var(--text); text-decoration: ${isChecked ? 'line-through' : 'none'};">${truncate(t.desc)} ${t.installments > 0 ? `<span style="font-size:0.65rem; color:var(--text3); font-weight:600; margin-left:4px;">(${t.currentInstallment}/${t.installments})</span>` : ''}</div>
           <div style="font-size:0.65rem; color:var(--text2);">${new Date(t.date + 'T12:00:00').toLocaleDateString()}</div>
         </div>
       </div>
@@ -2354,7 +2426,16 @@ window.openTransactionForm = function (d = null, trans = null) {
     // Se for ocorrência recorrente, d terá a data clicada
     const displayDate = d || (trans.date ? new Date(trans.date + 'T12:00:00') : new Date());
     if ($('trans-date')) $('trans-date').value = toDateStr(displayDate);
-    if ($('trans-recurrence')) $('trans-recurrence').value = trans.recurrence || 'none';
+    if ($('trans-recurrence')) {
+      $('trans-recurrence').value = trans.recurrence || 'none';
+      if (trans.recurrence && trans.recurrence !== 'none') {
+        $('group-installments')?.classList.remove('hidden');
+        if ($('trans-installments')) $('trans-installments').value = trans.installments || '';
+      } else {
+        $('group-installments')?.classList.add('hidden');
+        if ($('trans-installments')) $('trans-installments').value = '';
+      }
+    }
     window.setTransType(trans.type || 'expense');
 
     // Mostrar botão de "Desconsiderar" para qualquer transação recorrente
@@ -2384,6 +2465,9 @@ window.openTransactionForm = function (d = null, trans = null) {
     if (titleEl) titleEl.textContent = t('finance_add') || 'Nova Transação';
     if (btnDel) btnDel.classList.add('hidden');
     if ($('trans-date')) $('trans-date').value = toDateStr(d || new Date());
+    if ($('trans-recurrence')) $('trans-recurrence').value = 'none';
+    $('group-installments')?.classList.add('hidden');
+    if ($('trans-installments')) $('trans-installments').value = '';
     if ($('trans-recurring-options')) $('trans-recurring-options').classList.add('hidden');
     window.setTransType('expense');
   }

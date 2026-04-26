@@ -1424,15 +1424,22 @@
               <span data-i18n="btn_ignore_instance">Desconsiderar neste dia</span>
             </button>
           </div>
-          <div class="field-group">
-            <label class="field-label" data-i18n="evt_recurrence_label">Recorrência</label>
-            <select id="trans-recurrence" class="field-input field-select">
-              <option value="none" data-i18n="recurrence_none">Não se repete</option>
-              <option value="daily" data-i18n="recurrence_daily">Diariamente</option>
-              <option value="weekly" data-i18n="recurrence_weekly">Semanalmente</option>
-              <option value="monthly" data-i18n="recurrence_monthly">Mensalmente</option>
-              <option value="yearly" data-i18n="recurrence_yearly">Anualmente</option>
-            </select>
+          <div class="field-row">
+            <div class="field-group flex-1">
+              <label class="field-label" data-i18n="evt_recurrence_label">Recorrência</label>
+              <select id="trans-recurrence" class="field-input field-select">
+                <option value="none" data-i18n="recurrence_none">Não se repete</option>
+                <option value="daily" data-i18n="recurrence_daily">Diariamente</option>
+                <option value="weekly" data-i18n="recurrence_weekly">Semanalmente</option>
+                <option value="monthly" data-i18n="recurrence_monthly">Mensalmente</option>
+                <option value="yearly" data-i18n="recurrence_yearly">Anualmente</option>
+              </select>
+            </div>
+            
+            <div class="field-group flex-1 hidden" id="group-installments">
+              <label class="field-label" data-i18n="finance_installments">Qtd. de Vezes</label>
+              <input type="number" id="trans-installments" class="field-input" min="0" placeholder="Ilimitado">
+            </div>
           </div>
 
           <div class="form-actions" style="margin-top: 20px;">
