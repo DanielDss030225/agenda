@@ -176,9 +176,12 @@ window.resetAuthUI = function () {
   const errEl = $('login-error');
   if (errEl) errEl.textContent = '';
 
-  // Resetar Hero (Logo/Titulo)
+  // Resetar Hero (Logo/Titulo) e liberar o lock de foco para a próxima sessão
   const screen = $('login-screen');
-  if (screen) screen.classList.remove('focused');
+  if (screen) {
+    screen.classList.remove('focused');
+    if (typeof screen._resetFocusLock === 'function') screen._resetFocusLock();
+  }
 
   // Aplicar estado visual (Forçar login mode)
   // Como toggleAuthMode inverte, vamos setar isLoginMode false e chamar toggle
@@ -226,7 +229,8 @@ window.toggleAuthMode = function () {
     btnSubmit.classList.add('hidden');
     btnNext.classList.remove('hidden');
     btnToggle.innerHTML = i18n.t('login_no_account') || 'Não tem uma conta? <span style="color: var(--primary);">Cadastre-se grátis.</span>';
-    if (forgotBtn) forgotBtn.classList.remove('hidden');
+    if (forgotBtn) forgotBtn.closest('#forgot-pass-wrap')?.classList.remove('hidden');
+    $('login-form')?.classList.remove('register-mode');
   } else {
     if (titleEl) {
       titleEl.setAttribute('data-i18n', 'login_header_register');
@@ -251,7 +255,8 @@ window.toggleAuthMode = function () {
     btnSubmit.classList.add('hidden');
     btnNext.classList.remove('hidden');
     btnToggle.innerHTML = i18n.t('login_have_account') || 'Já tem uma conta? <span style="color: var(--primary);">Fazer login</span>';
-    if (forgotBtn) forgotBtn.classList.add('hidden');
+    if (forgotBtn) forgotBtn.closest('#forgot-pass-wrap')?.classList.add('hidden');
+    $('login-form')?.classList.add('register-mode');
   }
   updateStepDots();
   $('login-error').textContent = '';
@@ -335,36 +340,122 @@ function updateStepDots() {
   });
 }
 
+let _recoveryCountdownTimer = null;
+
 window.toggleRecovery = function (show) {
+  const loginForm   = $('login-form');
+  const recoveryEl  = $('recovery-area');
+  const formState   = $('recovery-form-state');
+  const successState = $('recovery-success-state');
+
   if (show) {
-    hide('login-form');
-    show('recovery-area');
+    if (loginForm)   loginForm.classList.add('hidden');
+    if (recoveryEl)  recoveryEl.classList.remove('hidden');
+    // Always start at form state
+    if (formState)   formState.classList.remove('hidden');
+    if (successState) successState.classList.add('hidden');
+    const inp = $('inp-recovery-email');
+    if (inp) { inp.value = ''; setTimeout(() => inp.focus(), 120); }
   } else {
-    show('login-form');
-    hide('recovery-area');
+    if (loginForm)   loginForm.classList.remove('hidden');
+    if (recoveryEl)  recoveryEl.classList.add('hidden');
+    // Clear countdown
+    if (_recoveryCountdownTimer) { clearInterval(_recoveryCountdownTimer); _recoveryCountdownTimer = null; }
   }
-  $('login-error').textContent = '';
-  $('recovery-error').textContent = '';
+  const errEl = $('login-error');
+  const recErr = $('recovery-error');
+  if (errEl)  errEl.textContent  = '';
+  if (recErr) recErr.textContent = '';
 };
 
+function _startResendCountdown(seconds = 60) {
+  const countdownWrap = $('recovery-countdown-wrap');
+  const resendWrap    = $('recovery-resend-wrap');
+  const countdownNum  = $('recovery-countdown');
+
+  if (countdownWrap) countdownWrap.classList.remove('hidden');
+  if (resendWrap)    resendWrap.classList.add('hidden');
+  if (countdownNum)  countdownNum.textContent = seconds;
+
+  if (_recoveryCountdownTimer) clearInterval(_recoveryCountdownTimer);
+  let remaining = seconds;
+  _recoveryCountdownTimer = setInterval(() => {
+    remaining--;
+    if (countdownNum) countdownNum.textContent = remaining;
+    if (remaining <= 0) {
+      clearInterval(_recoveryCountdownTimer);
+      _recoveryCountdownTimer = null;
+      if (countdownWrap) countdownWrap.classList.add('hidden');
+      if (resendWrap)    resendWrap.classList.remove('hidden');
+    }
+  }, 1000);
+}
 
 async function sendRecoveryEmail() {
-  const email = $('inp-recovery-email').value;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const email = ($('inp-recovery-email')?.value || '').trim();
+  const errEl = $('recovery-error');
+  const btn   = $('btn-send-recovery');
+
+  if (errEl) errEl.textContent = '';
+
   if (!email) {
-    $('recovery-error').textContent = "Digite seu e-mail.";
+    if (errEl) errEl.textContent = i18n.t('err_fill_all');
     return;
   }
+  if (!emailRegex.test(email)) {
+    if (errEl) errEl.textContent = i18n.t('err_invalid_email');
+    return;
+  }
+
+  // Loading state on button
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.7'; }
   showLoading('loading_connecting');
+
   try {
     await firebase.auth().sendPasswordResetEmail(email);
     hideLoading();
-    alert("E-mail de recuperação enviado! Verifique sua caixa de entrada.");
-    toggleRecovery(false);
+
+    // Show success state
+    const formState    = $('recovery-form-state');
+    const successState = $('recovery-success-state');
+    if (formState)    formState.classList.add('hidden');
+    if (successState) successState.classList.remove('hidden');
+
+    // Show masked email in subtitle
+    const sentTo = $('recovery-sent-to');
+    if (sentTo) {
+      const masked = email.replace(/(.{2}).+(@.+)/, '$1***$2');
+      sentTo.textContent = masked;
+    }
+
+    // Restart animation by re-cloning the ripple
+    const ripple = document.querySelector('.recovery-success-ripple');
+    if (ripple) {
+      ripple.style.animation = 'none';
+      ripple.offsetHeight; // reflow
+      ripple.style.animation = '';
+    }
+
+    _startResendCountdown(60);
   } catch (error) {
     hideLoading();
-    $('recovery-error').textContent = error.message;
+    if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+    let msg = error.message || i18n.t('login_err_conn');
+    if (error.code === 'auth/user-not-found')  msg = i18n.t('recovery_err_not_found') || 'Nenhuma conta encontrada com este e-mail.';
+    if (error.code === 'auth/invalid-email')   msg = i18n.t('err_invalid_email');
+    if (error.code === 'auth/too-many-requests') msg = i18n.t('recovery_err_too_many') || 'Muitas tentativas. Aguarde alguns minutos.';
+    if (errEl) errEl.textContent = msg;
   }
 }
+
+window.resendRecoveryEmail = async function () {
+  const btn = $('btn-resend-recovery');
+  if (btn) { btn.disabled = true; }
+  await sendRecoveryEmail();
+  if (btn) { btn.disabled = false; }
+};
+
 
 // Global Auth State Observer
 firebase.auth().onAuthStateChanged(async (user) => {
@@ -433,6 +524,35 @@ function initApp() {
     hideLoading();
   }
 }
+
+// ======================== LOGIN FOCUS BEHAVIOR (Mobile) ========================
+// Quando um input da tela de login recebe foco em telas pequenas (<= 640px),
+// a classe 'focused' é adicionada ao #login-screen para mover o formulário ao topo,
+// ocultando o hero e evitando que o teclado virtual sobreponha os campos.
+(function setupLoginFocusBehavior() {
+  const loginScreen = document.getElementById('login-screen');
+  if (!loginScreen) return;
+
+  // Uma vez que o usuário focar num input pela primeira vez em mobile,
+  // o estado "focused" fica permanente até o próximo logout/reset.
+  let loginFocusLocked = false;
+
+  function onLoginInputFocus() {
+    if (window.innerWidth > 640) return;
+    if (!loginFocusLocked) {
+      loginFocusLocked = true;
+    }
+    loginScreen.classList.add('focused');
+  }
+
+  // Delega apenas o focusin — o focusout não remove mais a classe após o primeiro foco.
+  loginScreen.addEventListener('focusin', (e) => {
+    if (e.target.matches('input')) onLoginInputFocus();
+  });
+
+  // Expõe reset para ser chamado pelo resetAuthUI ao fazer logout
+  loginScreen._resetFocusLock = () => { loginFocusLocked = false; };
+})();
 
 // Update the form submission
 document.getElementById('login-form').onsubmit = async (e) => {
