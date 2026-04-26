@@ -1177,7 +1177,7 @@ function openDayModal(d) {
     `;
 
     div.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+      <div id="cardtime">
         <div style="display:flex; align-items:center; gap:10px; flex: 1; overflow: hidden;">
           <span class="material-symbols-outlined" style="font-size:20px; color:${color}; flex-shrink: 0;">${iconName}</span>
           <div class="event-item-title" style="font-size:1.05rem; font-weight:800; color:var(--text); text-decoration: ${ev.isIgnored ? 'line-through' : 'none'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
