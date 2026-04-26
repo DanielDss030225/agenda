@@ -953,7 +953,7 @@ body {
   overflow: hidden;
   padding-bottom: var(--safe-bottom);
   transition: transform 0.2s ease-out, padding 0.2s ease;
-  padding: 20px !important;
+  padding: 10px !important;
 }
 
 .modal-sheet-tall {
@@ -1665,8 +1665,35 @@ body {
   opacity: 0;
 }
 
+#buttonActionModal {
 
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  margin-top: 20px;
+}
 
+#month-title {
+  min-width: 250px;
+  text-align: center;
+  cursor: pointer;
+}
+
+#btn-view-ai {
+  display: none;
+}
+
+#logoMarca {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+}
+
+.imgGif {
+  width: 150px;
+  height: 150px;
+  object-fit: contain;
+}
 
 /* ===== WEB APP LAYOUT (DESKTOP FIRST) ===== */
 @media (min-width: 900px) {
@@ -1679,6 +1706,7 @@ body {
     font-size: 17px;
     /* Aumenta tamanho base de textos e botões */
   }
+
 
   #app-screen:not(.hidden) {
     display: flex !important;
@@ -1810,6 +1838,55 @@ body {
     grid-template-columns: repeat(4, 1fr);
   }
 
+
+
+}
+
+@media (max-width: 900px) {
+  .header-actions button {
+    font-size: 14px !important;
+  }
+
+  .scale-preview-wrap {
+    padding: 10px !important;
+  }
+
+  .imgGif {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+  }
+
+  #buttonActionModal {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 20px;
+  }
+
+  #btn-prev-month-abs {
+    display: none;
+  }
+
+  #btn-next-month-abs {
+    display: none;
+  }
+
+  #month-title {
+    min-width: 200px;
+    text-align: center;
+    cursor: pointer;
+  }
+
+  #scale-display {
+    display: none;
+  }
+
+  #logoMarca {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+  }
 
 }
 
@@ -2068,9 +2145,4 @@ textarea {
 
 .mini-fin-item.bal {
   color: var(--text);
-}
-
-
-button {
-  font-size: 16px !important;
 }

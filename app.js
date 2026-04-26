@@ -97,7 +97,7 @@ function showLoading(msgKey = 'loading_wait') {
     el = document.createElement('div');
     el.id = 'firebase-loading';
     el.style.cssText = `position:fixed;inset:0;background:#ffffff;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;gap:14px;font-family:Inter,sans-serif;`;
-    el.innerHTML = `<img class="imgGif" src="aberturaGif.gif" style="width:150px;height:150px;object-fit:contain;"><p id="fb-load-msg" style="color:#374151;font-size:.95rem;font-weight:500;margin-top:10px;">${msg}</p>`;
+    el.innerHTML = `<img class="imgGif" src="aberturaGif.gif" ><p id="fb-load-msg" style="color:#374151;font-size:.95rem;font-weight:500;margin-top:10px;">${msg}</p>`;
     document.body.appendChild(el);
   } else {
     document.getElementById('fb-load-msg').textContent = msg;
@@ -1211,7 +1211,7 @@ function openDayModal(d) {
             ${ev.isIgnored ? `
               <div style="display:flex; align-items:center; gap:4px; color:var(--danger); font-size:0.7rem; font-weight:700;">
                 <span class="material-symbols-outlined" style="font-size:14px;">event_busy</span>
-                DESCONSIDERADO
+                <span data-i18n="ignored_instance_badge">${typeof i18n !== 'undefined' ? i18n.t('ignored_instance_badge') : 'DESCONSIDERADO'}</span>
               </div>
             ` : ''}
          </div>
@@ -1268,7 +1268,12 @@ function openDayModal(d) {
         <div style="font-size:1rem; font-weight:800; color:${color}; text-decoration: ${(isChecked || t.isIgnored) ? 'line-through' : 'none'};">
           ${t.type === 'income' ? '+' : '-'} ${formatVal(t.amount)}
         </div>
-        ${t.isIgnored ? '<span class="material-symbols-outlined" style="font-size: 16px; color: var(--text3); display: block; margin-left: auto;">event_busy</span>' : ''}
+        ${t.isIgnored ? `
+          <div style="display:flex; align-items:center; gap:4px; color:var(--danger); font-size:0.7rem; font-weight:700; margin-top:4px; justify-content: flex-end;">
+            <span class="material-symbols-outlined" style="font-size:14px;">event_busy</span>
+            <span data-i18n="ignored_instance_badge">${typeof i18n !== 'undefined' ? i18n.t('ignored_instance_badge') : 'DESCONSIDERADO'}</span>
+          </div>
+        ` : ''}
       </div>
     `;
     div.onclick = (e) => {
@@ -1316,26 +1321,22 @@ function openEventForm(evt, clickedDate = null) {
   const btnIgnore = $('btn-ignore-event-instance');
 
   if (evt && recArea && btnIgnore) {
-    if (evt.recurrence && evt.recurrence !== 'none') {
-      recArea.classList.remove('hidden');
-      const isIgnored = evt.excludedDates && evt.excludedDates[$('evt-date').value];
-      const recType = evt.recurrence || 'daily';
-      const i18nKey = (isIgnored ? 'consider_instance_' : 'ignore_instance_') + recType;
+    recArea.classList.remove('hidden');
+    const isIgnored = evt.excludedDates && evt.excludedDates[$('evt-date').value];
+    const recType = (evt.recurrence && evt.recurrence !== 'none') ? evt.recurrence : 'daily';
+    const i18nKey = (isIgnored ? 'consider_instance_' : 'ignore_instance_') + recType;
 
-      const span = btnIgnore.querySelector('[data-i18n]');
-      if (span) {
-        span.setAttribute('data-i18n', i18nKey);
-        if (typeof i18n !== 'undefined') span.innerHTML = i18n.t(i18nKey);
-      }
-      if (typeof i18n !== 'undefined') i18n.applyToDOM();
-
-      btnIgnore.style.color = isIgnored ? 'var(--primary)' : 'var(--danger)';
-      btnIgnore.style.borderColor = isIgnored ? 'var(--primary-lt)' : 'var(--danger-lt)';
-      const icon = btnIgnore.querySelector('.material-symbols-outlined');
-      if (icon) icon.textContent = isIgnored ? 'event_available' : 'event_busy';
-    } else {
-      recArea.classList.add('hidden');
+    const span = btnIgnore.querySelector('[data-i18n]');
+    if (span) {
+      span.setAttribute('data-i18n', i18nKey);
+      if (typeof i18n !== 'undefined') span.innerHTML = i18n.t(i18nKey);
     }
+    if (typeof i18n !== 'undefined') i18n.applyToDOM();
+
+    btnIgnore.style.color = isIgnored ? 'var(--primary)' : 'var(--danger)';
+    btnIgnore.style.borderColor = isIgnored ? 'var(--primary-lt)' : 'var(--danger-lt)';
+    const icon = btnIgnore.querySelector('.material-symbols-outlined');
+    if (icon) icon.textContent = isIgnored ? 'event_available' : 'event_busy';
   } else {
     // Modo Novo ou elementos não encontrados
     if (recArea) recArea.classList.add('hidden');
@@ -2026,7 +2027,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if ($('btn-ignore-event-instance')) {
     $('btn-ignore-event-instance').onclick = () => {
       const dateStr = $('evt-date').value;
-      const eventId = $('evt-id').value;
+      const eventId = S.editingEventId;
       if (eventId && dateStr) window.ignoreEventInstance(eventId, dateStr);
     };
   }
@@ -2240,27 +2241,23 @@ window.openTransactionForm = function (d = null, trans = null) {
     const recArea = $('trans-recurring-options');
     const btnIgnore = $('btn-ignore-trans-instance');
     if (recArea && btnIgnore) {
-      if (trans.recurrence && trans.recurrence !== 'none') {
-        recArea.classList.remove('hidden');
-        // Toggle texto conforme estado e recorrência
-        const isIgnored = trans.excludedDates && trans.excludedDates[$('trans-date').value];
-        const recType = trans.recurrence || 'monthly';
-        const i18nKey = (isIgnored ? 'consider_instance_' : 'ignore_instance_') + recType;
+      recArea.classList.remove('hidden');
+      // Toggle texto conforme estado e recorrência
+      const isIgnored = trans.excludedDates && trans.excludedDates[$('trans-date').value];
+      const recType = (trans.recurrence && trans.recurrence !== 'none') ? trans.recurrence : 'daily';
+      const i18nKey = (isIgnored ? 'consider_instance_' : 'ignore_instance_') + recType;
 
-        const span = btnIgnore.querySelector('[data-i18n]');
-        if (span) {
-          span.setAttribute('data-i18n', i18nKey);
-          if (typeof i18n !== 'undefined') span.innerHTML = i18n.t(i18nKey);
-        }
-        if (typeof i18n !== 'undefined') i18n.applyToDOM();
-
-        btnIgnore.style.color = isIgnored ? 'var(--primary)' : 'var(--danger)';
-        btnIgnore.style.borderColor = isIgnored ? 'var(--primary-lt)' : 'var(--danger-lt)';
-        const icon = btnIgnore.querySelector('.material-symbols-outlined');
-        if (icon) icon.textContent = isIgnored ? 'event_available' : 'event_busy';
-      } else {
-        recArea.classList.add('hidden');
+      const span = btnIgnore.querySelector('[data-i18n]');
+      if (span) {
+        span.setAttribute('data-i18n', i18nKey);
+        if (typeof i18n !== 'undefined') span.innerHTML = i18n.t(i18nKey);
       }
+      if (typeof i18n !== 'undefined') i18n.applyToDOM();
+
+      btnIgnore.style.color = isIgnored ? 'var(--primary)' : 'var(--danger)';
+      btnIgnore.style.borderColor = isIgnored ? 'var(--primary-lt)' : 'var(--danger-lt)';
+      const icon = btnIgnore.querySelector('.material-symbols-outlined');
+      if (icon) icon.textContent = isIgnored ? 'event_available' : 'event_busy';
     }
   } else {
     // Modo Novo

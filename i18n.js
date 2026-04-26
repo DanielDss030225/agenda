@@ -94,8 +94,8 @@ const TRANSLATIONS = {
     btn_delete: 'Excluir',
     btn_cancel: 'Cancelar',
     btn_save: 'Salvar',
-    badge_off: 'Folga',
-    badge_work: 'Trabalho',
+    badge_off: 'Folg.',
+    badge_work: 'Trab.',
 
     // ---- Categories ----
     cat_evento: 'Evento',
@@ -183,6 +183,7 @@ const TRANSLATIONS = {
     confirm_recurrence_edit_desc: 'Deseja aplicar as alterações em todas as ocorrências da série ou apenas nesta?',
     btn_apply_all: 'Toda a Série',
     btn_apply_instance: 'Somente nesta',
+    ignored_instance_badge: 'DESCONSIDERADO',
 
     // ---- Bible Modal ----
     btn_amen: 'Amém',
@@ -450,6 +451,7 @@ const TRANSLATIONS = {
     confirm_recurrence_edit_desc: 'Do you want to apply changes to all occurrences in the series or only this one?',
     btn_apply_all: 'All Occurrences',
     btn_apply_instance: 'Only this one',
+    ignored_instance_badge: 'IGNORED',
     logout_title: 'Log Out?',
     logout_desc: 'You will need to log in again to access your data.',
     btn_logout_cancel: 'Cancel',

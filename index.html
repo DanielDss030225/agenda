@@ -545,7 +545,7 @@
     <!-- SIDE MENU -->
     <div id="side-menu" class="side-menu">
       <div class="side-menu-header">
-        <img src="fundoinvisivel.png" alt="Logo" style="width: 60px; height: 60px; object-fit: contain;">
+        <img id="logoMarca" src="fundoinvisivel.png" alt="Logo">
         <h4 style="margin-left: 15px;">Agenda ViewGo</h4>
         <button id="btn-close-menu" class="btn btn-ghost btn-icon">
           <span class="material-symbols-outlined">close</span>
@@ -725,7 +725,7 @@
                 <span class="material-symbols-outlined">chevron_left</span>
               </button>
 
-              <h2 id="month-title" class="cal-title" style="min-width: 350px !important; text-align: center;"></h2>
+              <h2 id="month-title" class="cal-title"></h2>
 
               <button id="btn-next-month" class="btn btn-ghost btn-icon-sm">
                 <span class="material-symbols-outlined">chevron_right</span>
@@ -967,7 +967,7 @@
 
         <div id="day-work-status" class="work-status-card"></div>
 
-        <div style="display: flex; gap: 8px; margin-top: 20px;">
+        <div id="buttonActionModal">
           <button id="btn-add-from-day" class="btn btn-outline flex-1" style="border-radius: 14px; height: 48px;">
             <span class="material-symbols-outlined" style="margin-right: 8px;">add</span>
             <span data-i18n="btn_add_event">Evento</span>
@@ -977,6 +977,7 @@
             <span data-i18n="finance_add">Finança</span>
           </button>
         </div>
+
         <h4
           style="font-size: 0.75rem; font-weight: 800;  text-transform: uppercase; margin: 16px 0 8px; letter-spacing: 0.5px;"
           data-i18n="cat_evento">Eventos</h4>
