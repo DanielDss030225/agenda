@@ -340,6 +340,7 @@ body {
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--border);
+  height: 71px;
 }
 
 .side-menu-content {
@@ -374,6 +375,7 @@ body {
   padding: 18px 24px;
   font-size: 1.1rem;
   border-radius: 18px;
+  justify-content: flex-start;
 }
 
 .side-menu h4 {
@@ -412,6 +414,7 @@ body {
   padding: 6px 14px 10px;
   gap: 8px;
   border-top: 1px solid var(--border);
+  height: 70px;
 }
 
 .scale-bar.hidden {
@@ -507,6 +510,8 @@ body {
   -webkit-overflow-scrolling: touch;
   scroll-behavior: smooth;
   padding-bottom: calc(20px + var(--safe-bottom));
+  position: relative;
+  /* Add this for absolute positioning of children if needed */
 }
 
 /* ===== CAL VIEWS ===== */
@@ -520,6 +525,26 @@ body {
 
 .cal-view.active {
   display: flex;
+}
+
+#viewAI.active {
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  z-index: 10;
+}
+
+#viewAI iframe {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
 }
 
 .cal-nav {
@@ -763,6 +788,27 @@ body {
   background: #22c55e;
 }
 
+.day-work-label {
+  position: absolute;
+  bottom: -1px;
+  right: 12px;
+  font-size: 0.45rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  opacity: 0.8;
+}
+
+.day-work-label.work {
+  color: #ef4444;
+}
+
+.day-work-label.off {
+  color: #22c55e;
+}
+
+
+
 /* ===== YEAR VIEW ===== */
 .year-grid {
   display: grid;
@@ -907,6 +953,7 @@ body {
   overflow: hidden;
   padding-bottom: var(--safe-bottom);
   transition: transform 0.2s ease-out, padding 0.2s ease;
+  padding: 20px !important;
 }
 
 .modal-sheet-tall {
@@ -1214,13 +1261,17 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 12px 14px;
+  padding: 14px 14px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 0px;
   cursor: pointer;
   transition: all .15s;
   box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  justify-content: start;
+  align-items: start;
 }
 
 .event-item:active {

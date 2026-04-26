@@ -271,6 +271,7 @@
       justify-content: center;
       transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s;
       z-index: 2;
+      display: none !important;
     }
 
     .fab-main-btn:active {
@@ -544,7 +545,7 @@
     <!-- SIDE MENU -->
     <div id="side-menu" class="side-menu">
       <div class="side-menu-header">
-        <img src="fundoinvisivel.png" alt="Logo" style="width: 80px; height: 80px; object-fit: contain;">
+        <img src="fundoinvisivel.png" alt="Logo" style="width: 60px; height: 60px; object-fit: contain;">
         <h4 style="margin-left: 15px;">Agenda ViewGo</h4>
         <button id="btn-close-menu" class="btn btn-ghost btn-icon">
           <span class="material-symbols-outlined">close</span>
@@ -556,11 +557,23 @@
             <span class="material-symbols-outlined" style="font-size: 18px; margin-right: 6px;">home</span>
             <span data-i18n="btn_go_home">Início (Hoje)</span>
           </button>
+
           <button id="btn-new-event" class="btn btn-outline btn-full" data-i18n-attr="title" data-i18n="btn_new_title"
             title="Novo Evento">
             <span class="material-symbols-outlined" style="font-size: 18px;">add</span>
             <span data-i18n="btn_new">Novo Evento</span>
           </button>
+
+          <button id="btn-new-transaction-side" class="btn btn-outline btn-full" style="margin-bottom: 10px;">
+            <span class="material-symbols-outlined" style="font-size: 18px;">add</span>
+            <span data-i18n="btn_new_transaction">Adicionar uma nova transação</span>
+          </button>
+          <button id="btn-agent-side" class="btn btn-outline btn-full" style="margin-bottom: 20px;">
+            <span class="material-symbols-outlined" style="font-size: 18px; margin-right: 6px;">smart_toy</span>
+            <span data-i18n="agent_fab">Agente AI</span>
+          </button>
+
+
           <button id="btn-lang-picker" class="btn btn-outline btn-full" style="margin-bottom: 10px;">
             <span class="material-symbols-outlined" style="margin-right:8px;">language</span>
             <span data-i18n="btn_lang">Idioma</span>
@@ -688,6 +701,10 @@
                 <span class="material-symbols-outlined" style="font-size: 18px;">grid_view</span>
                 <span data-i18n="btn_year">Ano</span>
               </button>
+              <button id="btn-view-ai" class="view-btn">
+                <span class="material-symbols-outlined" style="font-size: 18px;">smart_toy</span>
+                <span data-i18n="btn_ai">IA</span>
+              </button>
             </div>
           </div>
         </div>
@@ -781,6 +798,14 @@
             <!-- Rendered by JS: Annual Totals and Chart -->
           </div>
           <div id="year-grid" class="year-grid"></div>
+        </div>
+
+
+        <!-- YEAR VIEW -->
+        <div id="viewAI" class="cal-view">
+          <iframe id="meuIframe" src="agent.html">
+
+          </iframe>
         </div>
 
       </main>
@@ -1366,6 +1391,16 @@
       };
 
       window.lpConfirm = function () {
+        setTimeout(() => {
+          overlay.style.display = 'none';
+          overlay.classList.remove('hide');
+
+          const iframe = document.getElementById("meuIframe");
+          if (iframe) {
+            iframe.src = iframe.src;
+          }
+
+        }, 300);
         if (!_selectedLang) return;
 
         // Salva o idioma via i18n
@@ -1391,6 +1426,7 @@
           overlay.style.display = 'none';
           overlay.classList.remove('hide');
         }, 300);
+
       };
     })();
   </script>

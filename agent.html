@@ -72,6 +72,8 @@
       margin: 0;
       padding: 0;
       scroll-behavior: smooth;
+      height: 100vh;
+      overflow: hidden;
     }
 
     /* HEADER */
@@ -101,6 +103,7 @@
       margin-left: -8px;
       transition: background 0.2s, transform 0.1s;
       border-radius: 50%;
+      display: none !important;
     }
 
     .btn-back:active {
@@ -133,7 +136,8 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
-      /* Removido o overflow e a limitação de rolagem local, agora rola com a página */
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
     .msg {
@@ -186,6 +190,7 @@
       border-top: 1px solid var(--border);
       width: 100%;
       background: var(--bg);
+      flex-shrink: 0;
     }
 
     .chat-input {
@@ -242,6 +247,7 @@
       white-space: nowrap;
       width: 100%;
       background: var(--bg);
+      flex-shrink: 0;
     }
 
     .chip {
@@ -254,6 +260,43 @@
       cursor: pointer;
       color: var(--primary);
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+    }
+
+    .chips-wrapper {
+      position: relative;
+      background: var(--bg);
+      flex-shrink: 0;
+    }
+
+    .scroll-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 10;
+      width: 32px;
+      height: 32px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transition: all 0.2s;
+      color: var(--primary);
+    }
+
+    .scroll-btn:hover {
+      background: #fff;
+    }
+
+    .scroll-btn.left {
+      left: 5px;
+    }
+
+    .scroll-btn.right {
+      right: 5px;
     }
 
     ::-webkit-scrollbar {
@@ -283,8 +326,16 @@
     <!-- Mensagens aqui -->
   </div>
 
-  <div class="suggestion-chips" id="suggestion-chips">
-    <!-- Rendered by JS / i18n -->
+  <div class="chips-wrapper">
+    <button class="scroll-btn left" onclick="scrollChips(-200)">
+      <span class="material-symbols-outlined">chevron_left</span>
+    </button>
+    <div class="suggestion-chips" id="suggestion-chips">
+      <!-- Rendered by JS / i18n -->
+    </div>
+    <button class="scroll-btn right" onclick="scrollChips(200)">
+      <span class="material-symbols-outlined">chevron_right</span>
+    </button>
   </div>
 
   <div class="input-area" id="inputContainer">
@@ -302,6 +353,10 @@
   <script>
     // Global sound system
     function playClick() {
+      // Verifica se o som está habilitado no localStorage (sincronizado com o app principal)
+      const soundsEnabled = localStorage.getItem('agbizu_sounds_enabled') !== 'false';
+      if (!soundsEnabled) return;
+
       try {
         const audio = new Audio('click.mp3');
         audio.play().catch(() => { });
@@ -397,7 +452,7 @@
       d.className = `msg msg-${type}`;
       d.textContent = text;
       chat.appendChild(d);
-      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      chat.scrollTo({ top: chat.scrollHeight, behavior: 'smooth' });
     }
 
     function ask(text) {
@@ -417,7 +472,7 @@
       thinking.className = 'msg msg-bot';
       thinking.textContent = '...';
       chat.appendChild(thinking);
-      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      chat.scrollTo({ top: chat.scrollHeight, behavior: 'smooth' });
 
       setTimeout(() => {
         chat.removeChild(thinking);
@@ -433,21 +488,20 @@
       let q = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[?.!,]/g, "");
 
       // Number-word to numeral map (PT + EN)
+      // Number-word to numeral map (PT + EN)
       const numMap = {
-        // PT
-        'um': 1, 'dois': 2, 'tres': 3, 'quatro': 4, 'cinco': 5, 'seis': 6, 'sete': 7, 'oito': 8, 'nove': 9, 'dez': 10,
-        'onze': 11, 'doze': 12, 'treze': 13, 'quatorze': 14, 'catorze': 14, 'quinze': 15, 'dezesseis': 16, 'dezessete': 17, 'dezoito': 18, 'dezenove': 19,
-        'vinte': 20, 'trinta': 30, 'quarenta': 40, 'cinquenta': 50, 'sessenta': 60, 'setenta': 70, 'oitenta': 80, 'noventa': 90,
-        // EN
+        'um': 1, 'uma': 1, 'dois': 2, 'tres': 3, 'quatro': 4, 'cinco': 5, 'seis': 6, 'sete': 7, 'oito': 8, 'nove': 9, 'dez': 10,
+        'vinte': 20, 'trinta': 30,
         'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5, 'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10,
-        'eleven': 11, 'twelve': 12, 'thirteen': 13, 'fourteen': 14, 'fifteen': 15, 'sixteen': 16, 'seventeen': 17, 'eighteen': 18, 'nineteen': 19,
-        'twenty': 20, 'thirty': 30, 'forty': 40, 'fifty': 50, 'sixty': 60, 'seventy': 70, 'eighty': 80, 'ninety': 90
+        'twenty': 20, 'thirty': 30
       };
+      for (const [word, val] of Object.entries(numMap)) q = q.replace(new RegExp('\\b' + word + '\\b', 'g'), val);
 
-      for (const [word, val] of Object.entries(numMap)) {
-        q = q.replace(new RegExp('\\b' + word + '\\b', 'g'), val);
-      }
-      // Compound sums: "20 e 2" / "twenty and 2" -> 22
+      // Handle units manually for cleaner extraction
+      q = q.replace(/\b1\s+semana\b/g, '7').replace(/\b1\s+week\b/g, '7');
+      q = q.replace(/\bsemana\b/g, '7').replace(/\bweek\b/g, '7');
+      q = q.replace(/\bmes\b/g, '30').replace(/\bmonth\b/g, '30');
+
       q = q.replace(/(\d+)\s+(?:e|and)\s+(\d+)/g, (m, p1, p2) => parseInt(p1) + parseInt(p2));
 
       const res = getIntelligentResponse(q, text);
@@ -492,9 +546,15 @@
       // ── Identify scale/schedule intent (bilingual) ──
       const isScaleQuery = q.includes('folga') || q.includes('trabalha') || q.includes('trabalho') || q.includes('trampa') || q.includes('trampo') || q.includes('servico') || q.includes('escala') || q.includes('descans')
         || q.includes('day off') || q.includes('off day') || q.includes('schedule') || q.includes('shift') || q.includes('work') || q.includes('rest') || q.includes('off tomorrow') || q.includes('working') || q.includes('am i off') || q.includes('do i work');
-      if (isScaleQuery) currentIntent = 'scale';
+      
+      // Specific triggers for extra content that should override scale intent
+      const isExtraContent = q.includes('piada') || q.includes('joke') || q.includes('filme') || q.includes('movie') || 
+                             q.includes('biblia') || q.includes('bible') || q.includes('versiculo') || q.includes('verse') ||
+                             q.includes('motivacao') || q.includes('motivation') || q.includes('frase');
 
-      // 1. EXTRAÇÃO DE DATAS
+      if (isScaleQuery && !isExtraContent) currentIntent = 'scale';
+
+      // 1. DATA EXTRACTION
       const explicitDateMatch = q.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/);
 
       if (explicitDateMatch) {
@@ -567,13 +627,13 @@
       }
 
       // Memory inheritance: follow-up questions keep scale intent
-      if (!currentIntent && (q.includes('e') || q.includes('and') || explicitYear || foundRelativeDate) && mem.intent === 'scale') {
+      if (!currentIntent && !isExtraContent && (q.includes('e') || q.includes('and') || explicitYear || foundRelativeDate) && mem.intent === 'scale') {
         currentIntent = 'scale';
       }
 
       // Update long-term memory
       if (currentHoliday) mem.holiday = currentHoliday;
-      if (currentIntent) mem.intent = currentIntent;
+      if (currentIntent) mem.intent = currentIntent; else mem.intent = null;
       mem.date = targetDate;
 
       const dateStr = targetDate.toLocaleDateString(locale);
@@ -589,20 +649,6 @@
       const isCreateEvent = !isHelp && /\b(agendar|agende|agede|marcar|marque|marca|criar|crie|adicionar|adicione|adiciona|p[oó]e|p[oó]r|botar|bota|anotar|anota|schedule|book|remind|set|add)\b/i.test(q);
       const isListEvents = !isHelp && (q.includes('o que eu tenho') || q.includes('consultar evento') || q.includes('quais eventos') || q.includes('tem evento') || q.includes('eventos marcados') || q.includes('what do i have') || q.includes('list events') || q.includes('show events') || q.includes('my events') || q.includes('any events'));
       const isDeleteEvent = !isHelp && /\b(cancelar|desmarcar|apagar|excluir|deletar|cancel|delete|remove|erase)\b/i.test(q);
-
-      if (isHelp) {
-        if (q.includes('evento') || q.includes('adicionar') || q.includes('event') || q.includes('add'))
-          return isEN ? "To add an event, tap '+' at the top or tap any day in the calendar. Easy! ✅" : "Para adicionar, clique no '+' no topo ou toque direto em um dia do calendário. Fácil! ✅";
-        if (q.includes('escala') || q.includes('turno') || q.includes('schedule') || q.includes('shift'))
-          return isEN ? "To change your schedule, tap the purple button at the top of the agenda. Choose your shift and reference date. 📅" : "Para mudar sua escala, clique no botão roxo no topo da agenda. Lá você escolhe seu turno e o dia de referência. 📅";
-        if (q.includes('cor') || q.includes('tema') || q.includes('color') || q.includes('theme'))
-          return isEN ? "The premium purple theme is the current look. More color options coming soon! 💅" : "Por enquanto o tema é roxo premium, mas no futuro teremos mais cores! 💅";
-        if (q.includes('notificacao') || q.includes('notification'))
-          return isEN ? "Notifications arrive via the browser or PWA app if installed! ⚡" : "As notificações chegam pelo navegador ou pelo app se você instalou a PWA! ⚡";
-        return isEN
-          ? "I can help with: adding events, changing your schedule, and checking days off. What would you like to do?"
-          : "Posso te ajudar com: adicionar eventos, mudar escala e consultar folgas. O que quer fazer especificamente?";
-      }
 
       if (isCreateEvent) {
         // 1. Extrai Observação (Começa com 'obs' ou 'observacao')
@@ -735,8 +781,18 @@
         return isEN ? "No days off found in the next 60 days. Check your schedule!" : "Não encontrei folgas nos próximos 60 dias. Verifique sua escala!";
       }
 
-      // 4. EXTRA CONTENT (bilingual: jokes, movies, bible, motivation)
-      const PIADAS = [
+      // Removed duplicate specific date scale check block as it conflicts with section 4
+
+      const PIADAS = isEN ? [
+        "Why did the robot go to the eye doctor? Because it needed a vision update! 😂",
+        "Why is a shift worker's schedule like a cell phone? Because it often says 'Out of service'! 🤣",
+        "What did the programmer say at the barbecue? The meat is bugged! 🍖",
+        "Why did the math book commit suicide? Because it had too many problems. 📚",
+        "What did one decimal say to another? 'Get the point?' 📍",
+        "Why don't skeletons fight each other? They don't have the guts! 💀",
+        "How do you organize a space party? You 'planet'! 🚀",
+        "What do you call a fake noodle? An Impasta! 🍝"
+      ] : [
         "Por que o robô foi ao oculista? Porque precisava de uma nova atualização de visão! 😂",
         "Por que a escala do policial é igual ao celular? Porque às vezes dá um sinal de 'fora da área'! 🤣",
         "Qual o cúmulo da escala? Trabalhar no feriado e sonhar que está folgando. 😅",
@@ -764,8 +820,19 @@
         "O que é um pontinho roxo na agenda? O Agente Bizu cuidando de você! 💜"
       ];
 
-      const FILMES = [
+      const FILMES = isEN ? [
+        "🎬 **Inception**: Excellent for those who want to challenge the mind while resting.",
+        "🎬 **The Truman Show**: A deep insight into the reality we live in. Incredible.",
+        "🎬 **The Intern**: Great for relaxing and valuing experience.",
+        "🎬 **Gladiator**: Timeless. Shows what real focus and persistence look like.",
+        "🎬 **Parasite**: An intense film that won't let you blink.",
+        "🎬 **The Office (Series)**: Essential for laughing at workplace situations.",
+        "🎬 **John Wick**: Absolute focus on the mission. Unbeatable.",
+        "🎬 **Top Gun: Maverick**: Pure adrenaline for your day off.",
+        "🎬 **Interstellar**: Time is precious, and love is the only thing that travels through it."
+      ] : [
         "🎬 **Inception (A Origem)**: Excelente para quem quer desafiar a mente enquanto descansa.",
+        "🎬 **O Show de Truman**: Um bizu sobre a realidade que vivemos. Incrível.",
         "🎬 **The Intern (Um Senhor Estagiário)**: Ótimo para relaxar e valorizar a experiência.",
         "🎬 **Gladiador**: Atemporal. Mostra o que é foco e persistência real.",
         "🎬 **Parasita**: Um filme intenso que não te deixa piscar (igual a um plantão).",
@@ -792,7 +859,14 @@
         "🎬 **Fragmentado**: Para quem sente que tem 10 personalidades diferentes no turno!"
       ];
 
-      const BIBLIA = [
+      const BIBLIA = isEN ? [
+        "📖 **Philippians 4:13**: 'I can do all things through Christ who strengthens me.'",
+        "📖 **Psalm 23:1**: 'The Lord is my shepherd; I shall not want.'",
+        "📖 **Psalm 91:11**: 'For he will command his angels concerning you to guard you in all your ways.'",
+        "📖 **Joshua 1:9**: 'Be strong and courageous. Do not be afraid; do not be discouraged.'",
+        "📖 **Proverbs 3:5**: 'Trust in the Lord with all your heart.'",
+        "📖 **Matthew 11:28**: 'Come to me, all you who are weary and burdened, and I will give you rest.'"
+      ] : [
         "📖 **Filipenses 4:13**: 'Tudo posso naquele que me fortalece.'",
         "📖 **Salmo 23:1**: 'O Senhor é o meu pastor; nada me faltará.'",
         "📖 **Salmo 91:11**: 'Porque aos seus anjos dará ordens a teu respeito, para te guardarem em todos os teus caminhos.'",
@@ -820,7 +894,13 @@
         "📖 **Salmo 118:24**: 'Este é o dia que fez o Senhor; regozijemo-nos e alegremo-nos nele.'"
       ];
 
-      const MOTIVACAO = [
+      const MOTIVACAO = isEN ? [
+        "💡 'Success is the sum of small efforts repeated day in and day out.'",
+        "💡 'Discipline is the bridge between goals and accomplishment. Stay strong!'",
+        "💡 'Your only competition is who you were yesterday. Evolve every shift.'",
+        "💡 'Organization is the first step to a productive life.'",
+        "💡 'Don't stop when you're tired, stop when you're done!'"
+      ] : [
         "💡 'O sucesso é a soma de pequenos esforços repetidos dia após dia.'",
         "💡 'A disciplina é a ponte entre metas e realizações. Continue firme!'",
         "💡 'Sua única competição é quem você foi ontem. Evolua a cada turno.'",
@@ -851,7 +931,7 @@
       if (q.includes('piada') || q.includes('faca rir') || q.includes('contar algo engracado') || q.includes('joke') || q.includes('funny') || q.includes('make me laugh') || q.includes('tell me a joke')) return rand(PIADAS);
       if (q.includes('filme') || q.includes('indicacao') || q.includes('sugestao de filme') || q.includes('movie') || q.includes('film') || q.includes('watch') || q.includes('recommend')) return rand(FILMES);
       if (q.includes('biblia') || q.includes('versiculo') || q.includes('palavra de deus') || q.includes('bible') || q.includes('verse') || q.includes('scripture') || q.includes('god') || q.includes('faith')) return rand(BIBLIA);
-      if (q.includes('motivacao') || q.includes('motiva') || q.includes('frase motivacional') || q.includes('motivat') || q.includes('inspire') || q.includes('motivation') || q.includes('quote')) return rand(MOTIVACAO);
+      if (q.includes('motivacao') || q.includes('motiva') || q.includes('frase') || q.includes('inspire') || q.includes('motivation') || q.includes('quote')) return rand(MOTIVACAO);
 
       // 4. CONSULTA DE ESCALA (Contextual ou Explícita)
 
@@ -897,7 +977,7 @@
         'tip': 'Tip: Swipe event cards sideways on the main screen for quick options!',
         'security': 'Your data is safely stored in our cloud database. ☁️',
         'lost': 'Lost an event? Try the search icon (🔍) at the top of the agenda!',
-        'search': 'The search icon lets you quickly find past or future events by name.',
+        'search': 'To search for events, use the search tab (magnifying glass icon 🔍) at the top of the agenda and type the event name.',
         'calendar': 'The main calendar shows purple dots on work days. Keep an eye out!',
         'clear': 'To clear your custom sequence, use the "Clear" button in the schedule settings.',
         'late': 'Running late? Check if you have another commitment today first.',
@@ -994,6 +1074,7 @@
         'seguranca': 'Seus dados são salvos com segurança no nosso banco de dados na nuvem. ☁️',
         'perdi': 'Perdeu algum evento? Tente usar a busca (lupa) no topo da agenda!',
         'lupa': 'A lupa serve para pesquisar eventos antigos ou futuros rapidamente pelo nome.',
+        'pesquisar': 'Para pesquisar, use a aba de busca (ícone de lupa 🔍) no topo da agenda e digite o nome do evento.',
         'calendario': 'O calendário principal mostra círculos roxos nos dias de trabalho. Fique atento!',
         'limpar': 'Para limpar sua sequência personalizada, use o botão "Limpar" no menu de ajuste de escala.',
         'atrasado': 'Ih, corre! Mas antes, veja se não tem outro compromisso hoje.',
@@ -1242,6 +1323,20 @@
         if (q.includes(key)) return K[key];
       }
 
+      if (isHelp) {
+        if (q.includes('evento') || q.includes('adicionar') || q.includes('event') || q.includes('add'))
+          return isEN ? "To add an event, tap '+' at the top or tap any day in the calendar. Easy! ✅" : "Para adicionar, clique no '+' no topo ou toque direto em um dia do calendário. Fácil! ✅";
+        if (q.includes('escala') || q.includes('turno') || q.includes('schedule') || q.includes('shift'))
+          return isEN ? "To change your schedule, tap the purple button at the top of the agenda. Choose your shift and reference date. 📅" : "Para mudar sua escala, clique no botão roxo no topo da agenda. Lá você escolhe seu turno e o dia de referência. 📅";
+        if (q.includes('cor') || q.includes('tema') || q.includes('color') || q.includes('theme'))
+          return isEN ? "The premium purple theme is the current look. More color options coming soon! 💅" : "Por enquanto o tema é roxo premium, mas no futuro teremos mais cores! 💅";
+        if (q.includes('notificacao') || q.includes('notification'))
+          return isEN ? "Notifications arrive via the browser or PWA app if installed! ⚡" : "As notificações chegam pelo navegador ou pelo app se você instalou a PWA! ⚡";
+        return isEN
+          ? "I can help with: adding events, changing your schedule, and checking days off. What would you like to do?"
+          : "Posso te ajudar com: adicionar eventos, mudar escala e consultar folgas. O que quer fazer especificamente?";
+      }
+
       return isEN
         ? "I don't have a tip on that yet, but I'm learning! Want to schedule something or check your shift?"
         : "Ainda não tenho um bizu sobre isso, mas estou aprendendo! Quer agendar algo ou ver sua escala?";
@@ -1282,23 +1377,14 @@
       // Render suggestion chips
       const chipsEl = document.getElementById('suggestion-chips');
       if (chipsEl) {
-        const chips = [
-          { label: i18n.t('chip_holiday'), msg: i18n.lang() === 'pt' ? "Tô de folga amanhã?" : "Am I off tomorrow?" },
-          { label: i18n.t('chip_when_off'), msg: i18n.lang() === 'pt' ? "Quando eu folgo?" : "When is my next day off?" },
-          { label: i18n.t('chip_today'), msg: i18n.lang() === 'pt' ? "O que tenho agendado hoje?" : "What do I have scheduled today?" },
-          { label: i18n.t('chip_add'), msg: i18n.lang() === 'pt' ? "Como adiciono eventos?" : "How do I add events?" },
-          { label: i18n.t('chip_scale'), msg: i18n.lang() === 'pt' ? "Mudar escala" : "Change schedule" },
-          { label: i18n.t('chip_joke'), msg: i18n.lang() === 'pt' ? "Me conte uma piada" : "Tell me a joke" },
-          { label: i18n.t('chip_movie'), msg: i18n.lang() === 'pt' ? "Dica de filme" : "Movie recommendation" },
-          { label: i18n.t('chip_bible'), msg: i18n.lang() === 'pt' ? "Versículo do dia" : "Bible verse of the day" },
-          { label: i18n.t('chip_motivation'), msg: i18n.lang() === 'pt' ? "Frase motivacional" : "Motivational quote" },
-          { label: i18n.t('chip_search'), msg: i18n.lang() === 'pt' ? "Como pesquisar eventos?" : "How to search for events?" },
-        ];
-        chipsEl.innerHTML = chips.map(c =>
-          `<div class="chip" onclick="ask('${c.msg}')">${c.label}</div>`
-        ).join('');
+        const chipKeys = ['chip_holiday', 'chip_when_off', 'chip_today', 'chip_add', 'chip_scale', 'chip_joke', 'chip_movie', 'chip_bible', 'chip_motivation', 'chip_search'];
+        chipsEl.innerHTML = chipKeys.map(k => {
+          const text = i18n.t(k);
+          return `<div class="chip" onclick="ask('${text}')">${text}</div>`;
+        }).join('');
       }
     }
+
 
     window.toggleAgentLang = function () {
       if (typeof i18n !== 'undefined') {
@@ -1309,6 +1395,11 @@
 
     // Initial i18n apply
     applyAgentI18n();
+
+    window.scrollChips = (amount) => {
+      const el = document.getElementById('suggestion-chips');
+      if (el) el.scrollBy({ left: amount, behavior: 'smooth' });
+    };
 
     setTimeout(() => {
       const greeting = typeof i18n !== 'undefined' ? i18n.t('agent_greeting') : "Olá! Estou pronto. Diga algo como 'Folga amanhã?' ou peça ajuda.";

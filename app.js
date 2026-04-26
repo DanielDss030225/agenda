@@ -97,7 +97,7 @@ function showLoading(msgKey = 'loading_wait') {
     el = document.createElement('div');
     el.id = 'firebase-loading';
     el.style.cssText = `position:fixed;inset:0;background:#ffffff;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;gap:14px;font-family:Inter,sans-serif;`;
-    el.innerHTML = `<img class="imgGif" src="aberturaGif.gif" style="width:200px;height:200px;object-fit:contain;"><p id="fb-load-msg" style="color:#374151;font-size:.95rem;font-weight:500;margin-top:10px;">${msg}</p>`;
+    el.innerHTML = `<img class="imgGif" src="aberturaGif.gif" style="width:150px;height:150px;object-fit:contain;"><p id="fb-load-msg" style="color:#374151;font-size:.95rem;font-weight:500;margin-top:10px;">${msg}</p>`;
     document.body.appendChild(el);
   } else {
     document.getElementById('fb-load-msg').textContent = msg;
@@ -776,10 +776,10 @@ window.closeAnyModal = () => {
   ['modal-day', 'modal-event', 'modal-search', 'modal-scale', 'modal-logout', 'modal-onboarding-sound', 'modal-bible', 'modal-lang', 'modal-finances', 'modal-transaction', 'modal-confirm', 'modal-recurrence-choice'].forEach(closeModal);
 };
 
-window.showRecurrenceChoiceModal = function(onOnlyThis, onAll) {
+window.showRecurrenceChoiceModal = function (onOnlyThis, onAll) {
   play('click');
   if (typeof i18n !== 'undefined') i18n.applyToDOM();
-  
+
   $('btn-save-recurring-all').onclick = () => {
     closeModal('modal-recurrence-choice');
     onAll();
@@ -791,7 +791,7 @@ window.showRecurrenceChoiceModal = function(onOnlyThis, onAll) {
   $('btn-cancel-recurring-choice').onclick = () => {
     closeModal('modal-recurrence-choice');
   };
-  
+
   openModal('modal-recurrence-choice');
 };
 
@@ -826,8 +826,10 @@ function refreshCalendar() {
   if (S.viewMode === 'month') {
     renderMonthView();
     updateGlobalFinanceSummary();
-  } else {
+  } else if (S.viewMode === 'year') {
     renderYearView();
+  } else if (S.viewMode === 'ai') {
+    // AI view logic if needed, currently just Hello World
   }
 }
 
@@ -933,7 +935,7 @@ function initMonthSwiper(year) {
           ${pillsHtml}
           ${(allItems.length > 2 ? `<div class="day-more">+${allItems.length - 2} ${dayMore}</div>` : '')}
         </div>
-        ${(cur && ws && S.userScale ? `<div class="day-work-dot ${ws.isOff ? 'off' : 'work'}"></div>` : '')}
+        ${(cur && ws && S.userScale ? `<div class="day-work-label ${ws.isOff ? 'off' : 'work'}">${i18n.t(ws.isOff ? 'badge_off' : 'badge_work')}</div><div class="day-work-dot ${ws.isOff ? 'off' : 'work'}"> </div>` : '')}
       `;
       cell.onclick = (e) => { e.stopPropagation(); play('click'); openDayModal(d); };
       slide.appendChild(cell);
@@ -1078,12 +1080,26 @@ function renderYearView() {
 
 function setView(mode) {
   S.viewMode = mode;
-  ['month', 'year'].forEach(m => { $(`view-${m}`).classList.toggle('active', mode === m); $(`btn-view-${m}`).classList.toggle('active', mode === m); });
+  // Update view containers visibility
+  $('view-month').classList.toggle('active', mode === 'month');
+  $('view-year').classList.toggle('active', mode === 'year');
+  $('viewAI').classList.toggle('active', mode === 'ai');
+
+  // Update button active state
+  $('btn-view-month').classList.toggle('active', mode === 'month');
+  $('btn-view-year').classList.toggle('active', mode === 'year');
+  $('btn-view-ai').classList.toggle('active', mode === 'ai');
+
   refreshCalendar();
 }
 
 function escHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function truncate(str, len = 20) {
+  if (!str) return '';
+  return str.length > len ? str.substring(0, len) + '...' : str;
 }
 
 // ======================== MODALS & ACTIONS ========================
@@ -1142,7 +1158,7 @@ function openDayModal(d) {
   evs.forEach(ev => {
     const color = catColor(ev.category || 'evento');
     const iconName = ({ evento: 'event', aniversario: 'cake', trabalho: 'work', pessoal: 'person', saude: 'favorite', estudo: 'school' })[ev.category] || 'event';
-    
+
     const div = document.createElement('div');
     div.className = 'event-item';
     div.style = `
@@ -1159,13 +1175,13 @@ function openDayModal(d) {
       box-shadow: 0 4px 12px rgba(0,0,0,0.03);
       transition: transform 0.2s, box-shadow 0.2s;
     `;
-    
+
     div.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
         <div style="display:flex; align-items:center; gap:10px; flex: 1; overflow: hidden;">
           <span class="material-symbols-outlined" style="font-size:20px; color:${color}; flex-shrink: 0;">${iconName}</span>
           <div class="event-item-title" style="font-size:1.05rem; font-weight:800; color:var(--text); text-decoration: ${ev.isIgnored ? 'line-through' : 'none'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-            ${ev.title}
+            ${truncate(ev.title)}
           </div>
         </div>
         
@@ -1174,12 +1190,19 @@ function openDayModal(d) {
             <span class="material-symbols-outlined" style="font-size:14px;">schedule</span>
             ${ev.time}
           </div>
+          
+          <div style="display:flex; align-items:center; gap:4px; opacity: 0.5; margin-left:10px;">
+            <span class="material-symbols-outlined" style="font-size:12px;">calendar_today</span>
+            <span style="font-size:0.65rem; font-weight:600;">${new Date(ev.date + 'T12:00:00').toLocaleDateString()}</span>
+         </div>
+
+
         ` : ''}
       </div>
 
       ${ev.description ? `
         <div style="font-size:0.85rem; color:var(--text2); line-height:1.5; background: rgba(0,0,0,0.02); padding: 10px; border-radius: 12px; margin-bottom: 8px; border-left: 2px solid var(--border);">
-          ${ev.description}
+          ${truncate(ev.description)}
         </div>
       ` : ''}
       
@@ -1192,10 +1215,7 @@ function openDayModal(d) {
               </div>
             ` : ''}
          </div>
-         <div style="display:flex; align-items:center; gap:4px; opacity: 0.5;">
-            <span class="material-symbols-outlined" style="font-size:12px;">calendar_today</span>
-            <span style="font-size:0.65rem; font-weight:600;">${new Date(ev.date + 'T12:00:00').toLocaleDateString()}</span>
-         </div>
+        
       </div>
     `;
     div.onclick = () => { closeModal('modal-day'); S.editingEventId = ev.id; openEventForm(ev, d); };
@@ -1210,7 +1230,7 @@ function openDayModal(d) {
     const isChecked = !!t.checked;
     const color = t.type === 'income' ? '#16a34a' : '#dc2626';
     const bgColor = t.type === 'income' ? '#dcfce7' : '#fee2e2';
-    
+
     const div = document.createElement('div');
     div.className = 'finance-item' + (isChecked ? ' checked' : '');
     div.style = `
@@ -1227,7 +1247,7 @@ function openDayModal(d) {
       box-shadow: 0 2px 8px rgba(0,0,0,0.02);
       transition: all 0.2s;
     `;
-    
+
     div.innerHTML = `
       <button class="btn btn-ghost btn-icon-sm" onclick="window.toggleTransactionStatus('${t.id}', event)" style="color: ${isChecked ? 'var(--primary)' : 'var(--text3)'}; padding: 0; width: 32px; height: 32px; flex-shrink: 0;">
         <span class="material-symbols-outlined" style="font-size:24px; font-variation-settings: 'FILL' ${isChecked ? 1 : 0}">${isChecked ? 'check_circle' : 'radio_button_unchecked'}</span>
@@ -1239,7 +1259,7 @@ function openDayModal(d) {
       
       <div style="flex:1; overflow: hidden;">
         <div style="font-size:0.95rem; font-weight:750; color:var(--text); text-decoration: ${(isChecked || t.isIgnored) ? 'line-through' : 'none'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-          ${t.desc}
+          ${truncate(t.desc)}
         </div>
         <div style="font-size:0.75rem; color:var(--text3); font-weight:600;">${t.type === 'income' ? 'Receita' : 'Despesa'}</div>
       </div>
@@ -1277,38 +1297,38 @@ function openEventForm(evt, clickedDate = null) {
   S.editingEventId = isNew ? null : evt.id;
   S.editingOccurrenceDate = clickedDate ? toDateStr(clickedDate) : (evt ? evt.date : toDateStr(new Date()));
   const t = (k) => typeof i18n !== 'undefined' ? i18n.t(k) : k;
-  
+
   $('event-modal-title').textContent = evt ? t('edit_event') : t('new_event');
   $('evt-title').value = evt?.title || '';
   $('evt-desc').value = evt?.description || '';
   $('evt-time').value = evt?.time || '';
-  
+
   const displayDate = clickedDate || (evt?.date ? new Date(evt.date + 'T12:00:00') : (S.selectedDate || new Date()));
   $('evt-date').value = toDateStr(displayDate);
   $('evt-recurrence').value = evt?.recurrence || 'none';
-  
+
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === (evt?.category || 'evento')));
-  
+
   if (evt) show('btn-delete-event'); else hide('btn-delete-event');
   updateWorkBadge($('evt-date').value);
 
   const recArea = $('event-recurring-options');
   const btnIgnore = $('btn-ignore-event-instance');
-  
+
   if (evt && recArea && btnIgnore) {
     if (evt.recurrence && evt.recurrence !== 'none') {
       recArea.classList.remove('hidden');
       const isIgnored = evt.excludedDates && evt.excludedDates[$('evt-date').value];
       const recType = evt.recurrence || 'daily';
       const i18nKey = (isIgnored ? 'consider_instance_' : 'ignore_instance_') + recType;
-      
+
       const span = btnIgnore.querySelector('[data-i18n]');
       if (span) {
         span.setAttribute('data-i18n', i18nKey);
         if (typeof i18n !== 'undefined') span.innerHTML = i18n.t(i18nKey);
       }
       if (typeof i18n !== 'undefined') i18n.applyToDOM();
-      
+
       btnIgnore.style.color = isIgnored ? 'var(--primary)' : 'var(--danger)';
       btnIgnore.style.borderColor = isIgnored ? 'var(--primary-lt)' : 'var(--danger-lt)';
       const icon = btnIgnore.querySelector('.material-symbols-outlined');
@@ -1356,17 +1376,17 @@ async function saveEventForm(e) {
 
   isSavingEvent = true;
   const data = { title, date, description: $('evt-desc').value.trim(), time: $('evt-time').value, category: document.querySelector('.cat-btn.active')?.dataset.cat || 'evento', recurrence: $('evt-recurrence').value };
-  
+
   const original = S.editingEventId ? S.events.find(e => e.id === S.editingEventId) : null;
   const isRecurring = original && original.recurrence && original.recurrence !== 'none';
-  const shouldAsk = isRecurring; 
+  const shouldAsk = isRecurring;
   const isEditingVirtual = isRecurring && S.editingOccurrenceDate !== original.date;
 
   const performAllSave = async () => {
     showLoading('loading_saving');
     const saveData = { ...data };
     if (isEditingVirtual && original) {
-       saveData.date = original.date;
+      saveData.date = original.date;
     }
     if (S.editingEventId) await updateEvent(S.editingEventId, saveData); else await addEvent(saveData);
     finishSave();
@@ -1381,7 +1401,7 @@ async function saveEventForm(e) {
           description: data.description,
           time: data.time,
           category: data.category,
-          date: data.date 
+          date: data.date
         };
         if (!original.overrides) original.overrides = {};
         original.overrides[S.editingOccurrenceDate] = overrideData;
@@ -1407,7 +1427,7 @@ async function saveEventForm(e) {
 
   if (shouldAsk) {
     window.showRecurrenceChoiceModal(performInstanceSave, performAllSave);
-    isSavingEvent = false; 
+    isSavingEvent = false;
     return;
   }
 
@@ -1660,7 +1680,12 @@ function checkDailyMessage() {
   return true;
 }
 
-function updateSoundIcon() { $('icon-sound-on').classList.toggle('hidden', !S.soundsEnabled); $('icon-sound-off').classList.toggle('hidden', S.soundsEnabled); }
+function updateSoundIcon() {
+  $('icon-sound-on').classList.toggle('hidden', !S.soundsEnabled);
+  $('icon-sound-off').classList.toggle('hidden', S.soundsEnabled);
+  // Persiste no localStorage para sincronizar com o iframe do agente
+  localStorage.setItem('agbizu_sounds_enabled', S.soundsEnabled);
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   // Apply i18n on first load
@@ -1693,6 +1718,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   $('btn-new-event').onclick = () => { window.closeAnyModal(); S.selectedDate = new Date(); openEventForm(); };
+  $('btn-new-transaction-side').onclick = () => { window.closeAnyModal(); window.openTransactionForm(new Date()); };
+
   $('btn-add-from-day').onclick = () => { closeModal('modal-day'); openEventForm(); };
   $('btn-toggle-sound').onclick = () => { S.soundsEnabled = !S.soundsEnabled; updateSoundIcon(); saveProfile(); };
   if ($('btn-logout')) $('btn-logout').onclick = () => { window.closeAnyModal(); openModal('modal-logout'); };
@@ -1713,6 +1740,9 @@ document.addEventListener('DOMContentLoaded', () => {
   $('btn-scale-settings').onclick = () => openScaleModal();
   $('btn-view-month').onclick = () => setView('month');
   $('btn-view-year').onclick = () => setView('year');
+  $('btn-view-ai').onclick = () => setView('ai');
+  $('btn-agent-side').onclick = () => setView('ai');
+
   if ($('month-title')) {
     $('month-title').style.cursor = 'pointer';
     $('month-title').onclick = () => setView('year');
@@ -1929,7 +1959,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showLoading('loading_saving');
         const finalData = { ...saveDataLocal };
         if (isEditingVirtual && original) {
-           finalData.date = original.date;
+          finalData.date = original.date;
         }
         const idx = S.transactions.findIndex(t => t.id === transId);
         if (idx !== -1) S.transactions[idx] = finalData; else S.transactions.push(finalData);
@@ -2158,7 +2188,7 @@ function renderFinanceList(list) {
           <span class="material-symbols-outlined" style="font-size:18px;">${t.type === 'income' ? 'trending_up' : 'trending_down'}</span>
         </div>
         <div>
-          <div style="font-size:0.8rem; font-weight:700; color:var(--text); text-decoration: ${isChecked ? 'line-through' : 'none'};">${t.desc}</div>
+          <div style="font-size:0.8rem; font-weight:700; color:var(--text); text-decoration: ${isChecked ? 'line-through' : 'none'};">${truncate(t.desc)}</div>
           <div style="font-size:0.65rem; color:var(--text2);">${new Date(t.date + 'T12:00:00').toLocaleDateString()}</div>
         </div>
       </div>

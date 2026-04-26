@@ -55,6 +55,7 @@ const TRANSLATIONS = {
     events_count_one: 'evento',
     btn_month: 'Mês',
     btn_year: 'Ano',
+    btn_ai: 'IA',
     btn_back_month: 'Voltar',
 
     // ---- Calendar ----
@@ -94,7 +95,7 @@ const TRANSLATIONS = {
     btn_cancel: 'Cancelar',
     btn_save: 'Salvar',
     badge_off: 'Folga',
-    badge_work: 'Trabalha',
+    badge_work: 'Trabalho',
 
     // ---- Categories ----
     cat_evento: 'Evento',
@@ -129,6 +130,7 @@ const TRANSLATIONS = {
     finance_expenses: 'Despesas',
     finance_balance: 'Final',
     finance_add: 'Nova Transação',
+    btn_new_transaction: 'Nova Transação',
     finance_edit: 'Editar Transação',
     finance_type_income: 'Receita',
     finance_type_expense: 'Despesa',
@@ -141,7 +143,7 @@ const TRANSLATIONS = {
     finance_month_summary: 'Resumo de',
     finance_title: 'Controle Financeiro',
     btn_scale: 'Minha Escala',
-    btn_toggle_finance: 'Mostrar Resumo',
+    btn_toggle_finance: 'Finance Bar',
 
     // ---- Search Modal ----
     search_title: 'Pesquisar Eventos',
@@ -190,7 +192,7 @@ const TRANSLATIONS = {
     loading_restoring: 'Restaurando...',
     loading_saving: 'Salvando...',
     loading_deleting: 'Excluindo...',
-    loading_wait: '',
+    loading_wait: 'Por favor, aguarde...',
 
     // ---- Holidays ----
     holidays: {
@@ -226,10 +228,10 @@ const TRANSLATIONS = {
     agent_intro_desc: 'Sempre pronta para otimizar sua rotina e tirar suas dúvidas.',
     agent_online: 'Online e pronto para ajudar',
     agent_greeting: "Olá! Estou pronto. Diga algo como 'Folga amanhã?' ou peça ajuda.",
-    chip_holiday: 'Folga amanhã?',
-    chip_add: 'Add eventos?',
-    chip_scale: 'Mudar escala',
-    chip_when_off: 'Quando folgo?',
+    chip_holiday: 'No Natal estou de folga?',
+    chip_add: 'No Ano Novo estou de folga?',
+    chip_scale: 'Daqui uma semana estou de folga?',
+    chip_when_off: 'Daqui 30 dias estou de folga?',
     chip_joke: 'Contar piada',
     chip_movie: 'Dica de filme',
     chip_bible: 'Versículo bíblico',
@@ -331,6 +333,7 @@ const TRANSLATIONS = {
     events_count_one: 'event',
     btn_month: 'Month',
     btn_year: 'Year',
+    btn_ai: 'AI',
     btn_back_month: 'Back',
 
     // ---- Calendar ----
@@ -369,8 +372,8 @@ const TRANSLATIONS = {
     btn_delete: 'Delete',
     btn_cancel: 'Cancel',
     btn_save: 'Save',
-    badge_off: 'Day Off',
-    badge_work: 'Working',
+    badge_off: 'Off',
+    badge_work: 'Work',
 
     // ---- Categories ----
     cat_evento: 'Event',
@@ -405,6 +408,7 @@ const TRANSLATIONS = {
     finance_expenses: 'Expenses',
     finance_balance: 'Final',
     finance_add: 'New transaction',
+    btn_new_transaction: 'New transaction',
     finance_edit: 'Edit transaction',
     finance_type_income: 'Income',
     finance_type_expense: 'Expense',
@@ -417,7 +421,7 @@ const TRANSLATIONS = {
     finance_month_summary: 'Summary of',
     finance_title: 'Financial Control',
     btn_scale: 'My Scale',
-    btn_toggle_finance: 'Show Finance Bar',
+    btn_toggle_finance: 'Finance Bar',
 
     // ---- Search Modal ----
     search_title: 'Search events',
@@ -501,10 +505,10 @@ const TRANSLATIONS = {
     agent_intro_desc: 'Always ready to optimize your routine and answer your questions.',
     agent_online: 'Online and ready to help',
     agent_greeting: "Hello! I'm ready. Ask something like 'Day off tomorrow?' or ask for help.",
-    chip_holiday: 'Day off tomorrow?',
-    chip_add: 'Add events?',
-    chip_scale: 'Change schedule',
-    chip_when_off: 'When am I off?',
+    chip_holiday: 'Am I off on Christmas?',
+    chip_add: 'Am I off on New Year?',
+    chip_scale: 'Am I off in a week?',
+    chip_when_off: 'Am I off in 30 days?',
     chip_joke: 'Tell a joke',
     chip_movie: 'Movie tip',
     chip_bible: 'Bible verse',
