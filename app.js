@@ -923,6 +923,10 @@ function toggleSideMenu(open) {
   } else {
     menu.classList.remove('active');
     overlay.classList.add('hidden');
+    const content = document.querySelector('.side-menu-content');
+    if (content) {
+      setTimeout(() => { content.scrollTop = 0; }, 300);
+    }
     if (session && typeof window.showAgentFab === 'function') window.showAgentFab();
   }
 }
