@@ -42,17 +42,18 @@ async function loadDashboard() {
         allUsers = snap.val() || {};
         
         const userList = Object.entries(allUsers).map(([id, data]) => ({ id, ...data }));
+        const today = new Date().toISOString().split('T')[0];
         
         // Update stats
         document.getElementById('total-users-val').textContent = userList.length;
         
-        let totalActionsCount = 0;
+        let totalActionsToday = 0;
         userList.forEach(u => {
-            if (u.stats && u.stats.actions) {
-                Object.values(u.stats.actions).forEach(count => totalActionsCount += count);
+            if (u.stats && u.stats.dailyActions && u.stats.dailyActions[today]) {
+                Object.values(u.stats.dailyActions[today]).forEach(count => totalActionsToday += count);
             }
         });
-        document.getElementById('total-actions-val').textContent = totalActionsCount;
+        document.getElementById('total-actions-val').textContent = totalActionsToday;
 
         renderUserGrid(userList);
     } catch (e) {
@@ -182,6 +183,44 @@ async function deleteUser() {
         console.error("Erro ao deletar:", e);
         alert("Erro ao deletar usuário.");
     }
+}
+
+function openActionsModal() {
+    const list = document.getElementById('active-users-list');
+    list.innerHTML = '';
+    const today = new Date().toISOString().split('T')[0];
+    
+    const activeUsers = Object.entries(allUsers).filter(([id, data]) => {
+        return data.stats && data.stats.dailyActions && data.stats.dailyActions[today];
+    });
+
+    if (activeUsers.length === 0) {
+        list.innerHTML = '<p style="text-align:center; color:var(--text3); font-size:0.85rem;">Nenhuma ação registrada hoje ainda.</p>';
+    } else {
+        activeUsers.forEach(([id, data]) => {
+            let userActionsToday = 0;
+            Object.values(data.stats.dailyActions[today]).forEach(c => userActionsToday += c);
+            
+            const div = document.createElement('div');
+            div.className = 'user-card';
+            div.style.padding = '12px';
+            div.innerHTML = `
+                <div class="user-avatar" style="width:36px; height:36px; font-size:0.9rem;">${(data.displayName || data.email || '?').charAt(0).toUpperCase()}</div>
+                <div class="user-info">
+                    <h3 style="font-size:0.85rem;">${data.displayName || 'Sem Nome'}</h3>
+                    <p style="font-size:0.7rem; color:var(--primary); font-weight:700;">${userActionsToday} ações hoje</p>
+                </div>
+            `;
+            div.onclick = () => { closeActionsModal(); openUserModal(id); };
+            list.appendChild(div);
+        });
+    }
+
+    document.getElementById('actions-modal').classList.remove('hidden');
+}
+
+function closeActionsModal() {
+    document.getElementById('actions-modal').classList.add('hidden');
 }
 
 function closeUserModal() {

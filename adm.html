@@ -316,9 +316,10 @@
                 <span class="label">Total de Usuários</span>
                 <span class="value" id="total-users-val">--</span>
             </div>
-            <div class="stat-card">
+            <div class="stat-card" id="card-actions-today" onclick="openActionsModal()" style="cursor: pointer; transition: transform 0.2s;">
                 <span class="label">Ações Hoje (Total)</span>
                 <span class="value" id="total-actions-val">0</span>
+                <p style="font-size: 0.65rem; color: var(--text3); margin-top: 4px;">Clique para ver quem acessou</p>
             </div>
         </div>
 
@@ -395,6 +396,24 @@
                 <div class="modal-section-title">Frequência de Ações</div>
                 <div id="modal-user-actions" style="margin-bottom: 20px;">
                     <!-- Ações aqui -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="actions-modal" class="modal-overlay hidden">
+        <div class="modal-sheet" style="max-width: 500px;">
+            <div class="modal-handle"></div>
+            <div class="modal-header">
+                <h3 style="font-weight: 800; letter-spacing: -0.5px;">Ativos Hoje</h3>
+                <button class="btn btn-ghost btn-icon" onclick="closeActionsModal()">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="modal-body modal-scroll">
+                <p style="color: var(--text3); font-size: 0.85rem; margin-bottom: 20px;">Usuários que realizaram pelo menos uma ação hoje:</p>
+                <div id="active-users-list" style="display: flex; flex-direction: column; gap: 12px;">
+                    <!-- Lista de usuários ativos -->
                 </div>
             </div>
         </div>

@@ -48,7 +48,13 @@ function trackAction(actionName) {
   if (!S.currentUser) return;
   try {
     const cleanName = actionName.replace(/[.#$[\]]/g, '_');
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Total global
     db.ref(`users/${S.currentUser}/stats/actions/${cleanName}`).transaction(c => (c || 0) + 1);
+    // Diário
+    db.ref(`users/${S.currentUser}/stats/dailyActions/${today}/${cleanName}`).transaction(c => (c || 0) + 1);
+    
   } catch (e) { console.error("Track error:", e); }
 }
 
