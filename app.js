@@ -39,8 +39,35 @@ const S = {
   financeType: 'expense',
   editingTransactionId: null,
   editingOccurrenceDate: null,
-  showGlobalFinance: localStorage.getItem('agbizu_show_global_finance') !== 'false'
+  showGlobalFinance: localStorage.getItem('agbizu_show_global_finance') !== 'false',
+  sessionStartTime: Date.now()
 };
+
+// ======================== STATS TRACKING ========================
+function trackAction(actionName) {
+  if (!S.currentUser) return;
+  try {
+    const cleanName = actionName.replace(/[.#$[\]]/g, '_');
+    db.ref(`users/${S.currentUser}/stats/actions/${cleanName}`).transaction(c => (c || 0) + 1);
+  } catch (e) { console.error("Track error:", e); }
+}
+
+function updateTimeSpent() {
+  if (!S.currentUser || document.hidden) return;
+  const now = Date.now();
+  const diff = Math.floor((now - S.sessionStartTime) / 1000);
+  S.sessionStartTime = now;
+  if (diff <= 0) return;
+  try {
+    db.ref(`users/${S.currentUser}/stats/timeSpent`).transaction(c => (c || 0) + diff);
+  } catch (e) { }
+}
+setInterval(updateTimeSpent, 30000); // Update every 30s
+window.addEventListener('beforeunload', updateTimeSpent);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') S.sessionStartTime = Date.now();
+  else updateTimeSpent();
+});
 
 // ======================== AUDIO ========================
 const audio = {};
@@ -484,6 +511,16 @@ firebase.auth().onAuthStateChanged(async (user) => {
     }
 
     localStorage.setItem('agbizu_session', user.uid);
+    
+    // Check for Admin
+    if (user.email === 'maispraticodesenvolvimento@gmail.com') {
+      const btn = document.getElementById('btn-admin-panel');
+      if (btn) {
+        btn.classList.remove('hidden');
+        btn.onclick = () => window.location.href = 'adm.html';
+      }
+    }
+
     initApp();
   } else {
     console.log("No user session.");
@@ -886,6 +923,7 @@ function openModal(id) {
   $(id)?.classList.remove('hidden');
   play('modal');
   if (typeof window.hideAgentFab === 'function') window.hideAgentFab();
+  trackAction('open_modal_' + id);
 }
 
 function closeModal(id) {
@@ -1451,6 +1489,7 @@ function openDayModal(d) {
   });
 
   openModal('modal-day');
+  trackAction('view_day_details');
 }
 
 window.editEvent = (id) => { closeModal('modal-day'); openEventForm(S.events.find(e => e.id === id)); };
@@ -1985,7 +2024,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   if ($('btn-open-scale')) $('btn-open-scale').onclick = () => { toggleSideMenu(false); openScaleModal(); };
   if ($('btn-close-scale')) $('btn-close-scale').onclick = () => closeModal('modal-scale');
-  if ($('btn-save-scale')) $('btn-save-scale').onclick = () => saveScale();
+  if ($('btn-save-scale')) $('btn-save-scale').onclick = () => { saveScale(); trackAction('save_scale'); };
   if ($('btn-clear-seq')) $('btn-clear-seq').onclick = () => {
     const now = new Date();
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
@@ -2355,6 +2394,7 @@ function updateFinanceUI() {
 function openFinances() {
   updateFinanceUI();
   openModal('modal-finances');
+  trackAction('view_finances');
 }
 
 function formatVal(v) {
@@ -2589,4 +2629,8 @@ window.ignoreTransactionInstance = async function (id, dateStr) {
     hideLoading();
     console.error("Error toggling ignore status for transaction:", err);
   }
+};
+window.goToAgent = () => {
+  trackAction('open_ai_agent');
+  window.location.href = 'agent.html';
 };
