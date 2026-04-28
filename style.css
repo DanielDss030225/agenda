@@ -160,7 +160,7 @@ body {
 }
 
 /* Focused state only applies on small screens (mobile) */
-@media (max-width: 640px) {
+@media (max-width: 900px) {
   #login-screen.focused .login-hero {
     flex: 0;
     max-height: 0;
@@ -233,7 +233,7 @@ body {
   align-items: center;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 900px) {
   #login-screen.focused .login-footer {
     flex: 1;
     border-radius: 0;
@@ -877,7 +877,8 @@ body {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   scroll-behavior: smooth;
-  padding-bottom: calc(20px + var(--safe-bottom));
+  padding-bottom: 0;
+  /* Removido para evitar corte da base em 100% altura */
   position: relative;
   /* Add this for absolute positioning of children if needed */
 }
@@ -1025,6 +1026,8 @@ body {
   grid-template-rows: repeat(6, 1fr);
   background: var(--border);
   gap: 1px;
+  /* Garante um pequeno buffer no fundo para não cortar a 6ª linha */
+  padding-bottom: env(safe-area-inset-bottom, 10px);
 }
 
 /* ===== DAY CELLS ===== */
@@ -1182,8 +1185,8 @@ body {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
-  padding: 12px 14px;
-
+  padding: 12px 14px 40px;
+  /* Adicionado padding inferior para scroll */
 }
 
 @media (min-width: 480px) {

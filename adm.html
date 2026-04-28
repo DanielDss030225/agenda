@@ -264,7 +264,7 @@
             font-weight: 600;
         }
 
-        @media (max-width: 640px) {
+        @media (max-width: 900px) {
             .admin-header {
                 flex-direction: column;
                 gap: 16px;
@@ -316,7 +316,8 @@
                 <span class="label">Total de Usuários</span>
                 <span class="value" id="total-users-val">--</span>
             </div>
-            <div class="stat-card" id="card-actions-today" onclick="openActionsModal()" style="cursor: pointer; transition: transform 0.2s;">
+            <div class="stat-card" id="card-actions-today" onclick="openActionsModal()"
+                style="cursor: pointer; transition: transform 0.2s;">
                 <span class="label">Ações Hoje (Total)</span>
                 <span class="value" id="total-actions-val">0</span>
                 <p style="font-size: 0.65rem; color: var(--text3); margin-top: 4px;">Clique para ver quem acessou</p>
@@ -325,7 +326,8 @@
 
         <div style="margin-bottom: 20px;">
             <h2 style="font-weight: 800; letter-spacing: -0.5px;">Usuários Cadastrados</h2>
-            <p style="color: var(--text3); font-size: 0.85rem;">Gerencie e visualize o engajamento dos seus usuários.</p>
+            <p style="color: var(--text3); font-size: 0.85rem;">Gerencie e visualize o engajamento dos seus usuários.
+            </p>
         </div>
 
         <div class="user-grid" id="user-grid">
@@ -339,10 +341,11 @@
             <div class="modal-handle"></div>
             <div class="modal-header">
                 <div style="display: flex; align-items: center; gap: 16px; flex: 1;">
-                    <div class="user-avatar" id="modal-user-avatar" style="width: 52px; height: 52px; font-size: 1.3rem;">
+                    <div class="user-avatar" id="modal-user-avatar"
+                        style="width: 52px; height: 52px; font-size: 1.3rem;">
                         ?</div>
                     <div style="flex: 1;">
-                        <input type="text" id="modal-user-name-input" 
+                        <input type="text" id="modal-user-name-input"
                             style="width: 100%; border: none; background: var(--surface2); border-radius: 8px; padding: 4px 8px; font-size: 1.1rem; font-weight: 800; font-family: var(--font); color: var(--text);"
                             placeholder="Nome do usuário">
                         <p id="modal-user-email" style="font-size: 0.8rem; opacity: 0.6; margin-left: 8px;">--</p>
@@ -411,7 +414,8 @@
                 </button>
             </div>
             <div class="modal-body modal-scroll">
-                <p style="color: var(--text3); font-size: 0.85rem; margin-bottom: 20px;">Usuários que realizaram pelo menos uma ação hoje:</p>
+                <p style="color: var(--text3); font-size: 0.85rem; margin-bottom: 20px;">Usuários que realizaram pelo
+                    menos uma ação hoje:</p>
                 <div id="active-users-list" style="display: flex; flex-direction: column; gap: 12px;">
                     <!-- Lista de usuários ativos -->
                 </div>

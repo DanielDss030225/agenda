@@ -1956,7 +1956,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('btn-view-month').onclick = () => setView('month');
   $('btn-view-year').onclick = () => setView('year');
   $('btn-view-ai').onclick = () => setView('ai');
-  $('btn-agent-side').onclick = () => setView('ai');
+  $('btn-agent-side').onclick = () => { toggleSideMenu(false); setView('ai'); };
 
   if ($('month-title')) {
     $('month-title').style.cursor = 'pointer';
@@ -2640,6 +2640,7 @@ window.ignoreTransactionInstance = async function (id, dateStr) {
   }
 };
 window.goToAgent = () => {
+  toggleSideMenu(false);
   trackAction('open_ai_agent');
   window.location.href = 'agent.html';
 };
