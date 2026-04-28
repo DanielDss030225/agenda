@@ -37,9 +37,7 @@
       display: none !important;
     }
 
-    .lang-toggle-btn:hover {
-     
-    }
+    .lang-toggle-btn:hover {}
 
     .lang-toggle-btn:active {
       transform: scale(0.95);
@@ -502,8 +500,7 @@
               <span class="forgot-separator-text" data-i18n="login_or">ou</span>
               <span></span>
             </div>
-            <button type="button" id="btn-forgot-pass" class="forgot-pass-btn"
-              onclick="toggleRecovery(true)">
+            <button type="button" id="btn-forgot-pass" class="forgot-pass-btn" onclick="toggleRecovery(true)">
               <span class="material-symbols-outlined" style="font-size:15px;">lock_open</span>
               <span data-i18n="login_forgot">Esqueci minha senha</span>
             </button>
@@ -532,16 +529,16 @@
 
             <div class="recovery-header">
               <h3 class="recovery-title" data-i18n="recovery_title">Recuperar Senha</h3>
-              <p class="recovery-subtitle" data-i18n="recovery_desc">Digite seu e-mail para receber o link de recuperação.</p>
+              <p class="recovery-subtitle" data-i18n="recovery_desc">Digite seu e-mail para receber o link de
+                recuperação.</p>
             </div>
 
             <div class="field-group" style="margin-bottom: 8px;">
               <label class="field-label" data-i18n="login_email_label">E-mail</label>
               <div class="recovery-input-wrap">
                 <span class="material-symbols-outlined recovery-input-icon">alternate_email</span>
-                <input id="inp-recovery-email" class="field-input recovery-field-input"
-                  type="email" inputmode="email" autocomplete="email"
-                  data-i18n="login_email_placeholder" data-i18n-attr="placeholder"
+                <input id="inp-recovery-email" class="field-input recovery-field-input" type="email" inputmode="email"
+                  autocomplete="email" data-i18n="login_email_placeholder" data-i18n-attr="placeholder"
                   placeholder="seu@email.com" />
               </div>
             </div>
@@ -601,7 +598,8 @@
             <!-- Resend countdown -->
             <div id="recovery-resend-wrap" class="recovery-resend-wrap hidden">
               <span class="recovery-resend-text" data-i18n="recovery_resend_label">Não recebeu?</span>
-              <button type="button" id="btn-resend-recovery" class="recovery-resend-btn" onclick="resendRecoveryEmail()">
+              <button type="button" id="btn-resend-recovery" class="recovery-resend-btn"
+                onclick="resendRecoveryEmail()">
                 <span data-i18n="recovery_resend_btn">Reenviar</span>
               </button>
             </div>
@@ -699,7 +697,8 @@
           </button>
 
           <div style="flex: 1;"></div>
-          <button id="btn-admin-panel" class="btn btn-outline btn-full hidden" style="margin-bottom: 10px; border-color: #7c3aed; color: #7c3aed;">
+          <button id="btn-admin-panel" class="btn btn-outline btn-full hidden"
+            style="margin-bottom: 10px; border-color: #7c3aed; color: #7c3aed;">
             <span class="material-symbols-outlined" style="margin-right:8px;">admin_panel_settings</span>
             <span>Painel Admin</span>
           </button>
@@ -1438,7 +1437,7 @@
                 <option value="yearly" data-i18n="recurrence_yearly">Anualmente</option>
               </select>
             </div>
-            
+
             <div class="field-group flex-1 hidden" id="group-installments">
               <label class="field-label" data-i18n="finance_installments">Qtd. de Vezes</label>
               <input type="number" id="trans-installments" class="field-input" min="0" placeholder="Ilimitado">

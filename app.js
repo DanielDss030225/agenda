@@ -49,12 +49,12 @@ function trackAction(actionName) {
   try {
     const cleanName = actionName.replace(/[.#$[\]]/g, '_');
     const today = new Date().toISOString().split('T')[0];
-    
+
     // Total global
     db.ref(`users/${S.currentUser}/stats/actions/${cleanName}`).transaction(c => (c || 0) + 1);
     // Diário
     db.ref(`users/${S.currentUser}/stats/dailyActions/${today}/${cleanName}`).transaction(c => (c || 0) + 1);
-    
+
   } catch (e) { console.error("Track error:", e); }
 }
 
@@ -517,7 +517,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
     }
 
     localStorage.setItem('agbizu_session', user.uid);
-    
+
     // Check for Admin
     if (user.email === 'maispraticodesenvolvimento@gmail.com') {
       const btn = document.getElementById('btn-admin-panel');
@@ -751,11 +751,14 @@ function getDaysInMonth(year, month) {
   const first = new Date(year, month, 1);
   const last = new Date(year, month + 1, 0);
   const days = [];
+  // Mês anterior (padding)
   for (let i = first.getDay() - 1; i >= 0; i--) days.push({ date: new Date(year, month, -i), cur: false });
+  // Mês atual
   for (let d = 1; d <= last.getDate(); d++) days.push({ date: new Date(year, month, d), cur: true });
+  // Mês posterior (padding)
+  let nextDay = 1;
   while (days.length < 42) {
-    const n = days.length - (first.getDay() + last.getDate() - 1) + 1;
-    days.push({ date: new Date(year, month + 1, n), cur: false });
+    days.push({ date: new Date(year, month + 1, nextDay++), cur: false });
   }
   return days;
 }
@@ -860,12 +863,12 @@ function getTransactionsForDate(d) {
       const targetYear = targetDate.getFullYear();
       const startMonth = start.getMonth();
       const startDay = start.getDate();
-      
+
       if (targetMonth === startMonth) {
         const daysInTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
         const effectiveDay = Math.min(startDay, daysInTargetMonth);
         isOccurrence = targetDate.getDate() === effectiveDay;
-        
+
         if (isOccurrence) {
           currentInstallment = targetYear - start.getFullYear() + 1;
         }
@@ -2173,190 +2176,190 @@ document.addEventListener('DOMContentLoaded', () => {
       let shouldAsk = isRecurring;
       let hideOnlyThis = false;
 
-        if(original) {
-          const recurrenceChanged = (saveDataLocal.recurrence !== original.recurrence || saveDataLocal.installments !== (original.installments || 0));
-          const mainPropsSame = (saveDataLocal.desc === original.desc && saveDataLocal.amount === original.amount && saveDataLocal.type === original.type && saveDataLocal.date === original.date);
+      if (original) {
+        const recurrenceChanged = (saveDataLocal.recurrence !== original.recurrence || saveDataLocal.installments !== (original.installments || 0));
+        const mainPropsSame = (saveDataLocal.desc === original.desc && saveDataLocal.amount === original.amount && saveDataLocal.type === original.type && saveDataLocal.date === original.date);
 
-          if (recurrenceChanged) {
-            hideOnlyThis = true; // Não permite "Somente nesta" se a regra de repetição mudou
-            if (mainPropsSame) {
-              // Se alterou *apenas* a repetição/parcelas, aplica em todas direto pulando o modal
-              shouldAsk = false;
-            }
+        if (recurrenceChanged) {
+          hideOnlyThis = true; // Não permite "Somente nesta" se a regra de repetição mudou
+          if (mainPropsSame) {
+            // Se alterou *apenas* a repetição/parcelas, aplica em todas direto pulando o modal
+            shouldAsk = false;
           }
         }
+      }
 
       const isEditingVirtual = isRecurring && S.editingOccurrenceDate !== original?.date;
 
-        const finishTransSave = () => {
-          S.lastRenderedYear = null;
-          refreshCalendar();
-          if (!$('modal-finances').classList.contains('hidden')) updateFinanceUI();
-          hideLoading();
-          closeModal('modal-transaction');
-          setTimeout(() => isSavingTrans = false, 500);
-        };
+      const finishTransSave = () => {
+        S.lastRenderedYear = null;
+        refreshCalendar();
+        if (!$('modal-finances').classList.contains('hidden')) updateFinanceUI();
+        hideLoading();
+        closeModal('modal-transaction');
+        setTimeout(() => isSavingTrans = false, 500);
+      };
 
-        const performAllSave = async () => {
-          showLoading('loading_saving');
-          const finalData = { ...saveDataLocal };
-          if (isEditingVirtual && original) {
-            finalData.date = original.date;
-          }
-          const idx = S.transactions.findIndex(t => t.id === transId);
-          if (idx !== -1) S.transactions[idx] = finalData; else S.transactions.push(finalData);
-          await userRef(`transactions/${transId}`).set(finalData);
-          finishTransSave();
-        };
+      const performAllSave = async () => {
+        showLoading('loading_saving');
+        const finalData = { ...saveDataLocal };
+        if (isEditingVirtual && original) {
+          finalData.date = original.date;
+        }
+        const idx = S.transactions.findIndex(t => t.id === transId);
+        if (idx !== -1) S.transactions[idx] = finalData; else S.transactions.push(finalData);
+        await userRef(`transactions/${transId}`).set(finalData);
+        finishTransSave();
+      };
 
-        const performInstanceSave = async () => {
-          try {
-            showLoading('loading_saving');
-            if (original) {
-              const overrideData = {
-                desc: saveDataLocal.desc,
-                amount: saveDataLocal.amount,
-                type: saveDataLocal.type,
-                date: saveDataLocal.date
-              };
-              if (!original.overrides) original.overrides = {};
-              original.overrides[S.editingOccurrenceDate] = overrideData;
-              await userRef(`transactions/${original.id}/overrides/${S.editingOccurrenceDate}`).set(overrideData);
-            }
-            finishTransSave();
-          } catch (err) {
-            console.error("Erro ao salvar sobreposição de transação:", err);
-            alert("Erro ao processar transação.");
-            hideLoading();
-          }
-        };
-
+      const performInstanceSave = async () => {
         try {
-          if(shouldAsk) {
-            window.showRecurrenceChoiceModal(performInstanceSave, performAllSave, hideOnlyThis);
-            isSavingTrans = false;
-          } else {
-            isSavingTrans = true;
-            await performAllSave();
+          showLoading('loading_saving');
+          if (original) {
+            const overrideData = {
+              desc: saveDataLocal.desc,
+              amount: saveDataLocal.amount,
+              type: saveDataLocal.type,
+              date: saveDataLocal.date
+            };
+            if (!original.overrides) original.overrides = {};
+            original.overrides[S.editingOccurrenceDate] = overrideData;
+            await userRef(`transactions/${original.id}/overrides/${S.editingOccurrenceDate}`).set(overrideData);
           }
+          finishTransSave();
         } catch (err) {
+          console.error("Erro ao salvar sobreposição de transação:", err);
+          alert("Erro ao processar transação.");
           hideLoading();
-          console.error("Error saving transaction:", err);
-          alert("Erro ao salvar transação. Verifique sua conexão.");
-          isSavingTrans = false;
         }
       };
+
+      try {
+        if (shouldAsk) {
+          window.showRecurrenceChoiceModal(performInstanceSave, performAllSave, hideOnlyThis);
+          isSavingTrans = false;
+        } else {
+          isSavingTrans = true;
+          await performAllSave();
+        }
+      } catch (err) {
+        hideLoading();
+        console.error("Error saving transaction:", err);
+        alert("Erro ao salvar transação. Verifique sua conexão.");
+        isSavingTrans = false;
+      }
+    };
   }
 
-if ($('btn-add-fin-from-day')) {
-  $('btn-add-fin-from-day').onclick = () => {
-    console.log("[DEBUG] Botão 'Nova Transação' clicado");
-    play('click');
-    const d = S.selectedDate || new Date();
-    console.log("[DEBUG] Data selecionada:", d);
+  if ($('btn-add-fin-from-day')) {
+    $('btn-add-fin-from-day').onclick = () => {
+      console.log("[DEBUG] Botão 'Nova Transação' clicado");
+      play('click');
+      const d = S.selectedDate || new Date();
+      console.log("[DEBUG] Data selecionada:", d);
 
-    console.log("[DEBUG] Tentando fechar modal-day");
-    closeModal('modal-day');
+      console.log("[DEBUG] Tentando fechar modal-day");
+      closeModal('modal-day');
 
-    console.log("[DEBUG] Chamando window.openTransactionForm");
-    window.openTransactionForm(d);
-  };
-} else {
-  console.warn("[DEBUG] Elemento 'btn-add-fin-from-day' NÃO encontrado no DOM durante registro");
-}
+      console.log("[DEBUG] Chamando window.openTransactionForm");
+      window.openTransactionForm(d);
+    };
+  } else {
+    console.warn("[DEBUG] Elemento 'btn-add-fin-from-day' NÃO encontrado no DOM durante registro");
+  }
 
-if ($('btn-ignore-event-instance')) {
-  $('btn-ignore-event-instance').onclick = () => {
-    const dateStr = $('evt-date').value;
-    const eventId = S.editingEventId;
-    if (eventId && dateStr) window.ignoreEventInstance(eventId, dateStr);
-  };
-}
+  if ($('btn-ignore-event-instance')) {
+    $('btn-ignore-event-instance').onclick = () => {
+      const dateStr = $('evt-date').value;
+      const eventId = S.editingEventId;
+      if (eventId && dateStr) window.ignoreEventInstance(eventId, dateStr);
+    };
+  }
 
-if ($('btn-ignore-trans-instance')) {
-  $('btn-ignore-trans-instance').onclick = () => {
-    const dateStr = $('trans-date').value;
-    const transId = S.editingTransactionId;
-    if (transId && dateStr) window.ignoreTransactionInstance(transId, dateStr);
-  };
-}
-document.querySelectorAll('.modal-sheet').forEach(sheet => {
-  const overlay = sheet.parentElement;
-  const overlayId = overlay.id;
-  let startY = 0, currentY = 0, isDragging = false;
+  if ($('btn-ignore-trans-instance')) {
+    $('btn-ignore-trans-instance').onclick = () => {
+      const dateStr = $('trans-date').value;
+      const transId = S.editingTransactionId;
+      if (transId && dateStr) window.ignoreTransactionInstance(transId, dateStr);
+    };
+  }
+  document.querySelectorAll('.modal-sheet').forEach(sheet => {
+    const overlay = sheet.parentElement;
+    const overlayId = overlay.id;
+    let startY = 0, currentY = 0, isDragging = false;
 
-  const startDrag = (e) => {
-    if (e.target.closest('button, input, select')) return;
+    const startDrag = (e) => {
+      if (e.target.closest('button, input, select')) return;
 
-    // Se clicou no overlay, só inicia se for NO FUNDO (área escura)
-    if (e.currentTarget === overlay && e.target !== overlay) return;
+      // Se clicou no overlay, só inicia se for NO FUNDO (área escura)
+      if (e.currentTarget === overlay && e.target !== overlay) return;
 
-    startY = e.clientY; currentY = 0;
-    isDragging = true;
-    sheet.style.transition = 'none';
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-  };
+      startY = e.clientY; currentY = 0;
+      isDragging = true;
+      sheet.style.transition = 'none';
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+    };
 
-  const onMove = (e) => {
-    if (!isDragging) return;
-    currentY = e.clientY - startY;
-    if (currentY > 0) {
-      e.preventDefault();
-      sheet.style.transform = `translateY(${currentY}px)`;
-    }
-  };
+    const onMove = (e) => {
+      if (!isDragging) return;
+      currentY = e.clientY - startY;
+      if (currentY > 0) {
+        e.preventDefault();
+        sheet.style.transform = `translateY(${currentY}px)`;
+      }
+    };
 
-  const onUp = (e) => {
-    if (!isDragging) return;
-    isDragging = false;
-    window.removeEventListener('pointermove', onMove);
-    window.removeEventListener('pointerup', onUp);
+    const onUp = (e) => {
+      if (!isDragging) return;
+      isDragging = false;
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
 
-    if (currentY < 10 && e.target === overlay) {
-      // Tratado pelo document.click global para evitar ghost clicks
-    } else if (currentY > 60) { // Arraste profundo
-      sheet.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 1, 1)';
-      sheet.style.transform = 'translateY(100%)';
-      setTimeout(() => closeModal(overlayId), 180);
-    } else { // Arraste curto (volta)
-      sheet.style.transition = 'transform 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28)';
-      sheet.style.transform = 'translateY(0)';
-    }
-    currentY = 0;
-  };
+      if (currentY < 10 && e.target === overlay) {
+        // Tratado pelo document.click global para evitar ghost clicks
+      } else if (currentY > 60) { // Arraste profundo
+        sheet.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 1, 1)';
+        sheet.style.transform = 'translateY(100%)';
+        setTimeout(() => closeModal(overlayId), 180);
+      } else { // Arraste curto (volta)
+        sheet.style.transition = 'transform 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28)';
+        sheet.style.transform = 'translateY(0)';
+      }
+      currentY = 0;
+    };
 
-  // Registrar alças: Barra cinza, Cabeçalho e o próprio Fundo (Overlay)
-  const handle = sheet.querySelector('.modal-handle');
-  const header = sheet.querySelector('.modal-header');
+    // Registrar alças: Barra cinza, Cabeçalho e o próprio Fundo (Overlay)
+    const handle = sheet.querySelector('.modal-handle');
+    const header = sheet.querySelector('.modal-header');
 
-  if (handle) handle.addEventListener('pointerdown', startDrag);
-  if (header) header.addEventListener('pointerdown', startDrag);
-  overlay.addEventListener('pointerdown', startDrag);
+    if (handle) handle.addEventListener('pointerdown', startDrag);
+    if (header) header.addEventListener('pointerdown', startDrag);
+    overlay.addEventListener('pointerdown', startDrag);
 
-  // Impedir que o toque dentro do conteúdo do modal cause conflito de scroll/drag no fundo
-  sheet.addEventListener('pointerdown', (e) => {
-    if (e.target !== handle && !header.contains(e.target)) e.stopPropagation();
-  }, { passive: true });
-});
+    // Impedir que o toque dentro do conteúdo do modal cause conflito de scroll/drag no fundo
+    sheet.addEventListener('pointerdown', (e) => {
+      if (e.target !== handle && !header.contains(e.target)) e.stopPropagation();
+    }, { passive: true });
+  });
 
-// ---- Inteligência de Teclado (Mobile) ----
-if (window.visualViewport) {
-  const vv = window.visualViewport;
-  const updateKeyboard = () => {
-    // Diferença entre a tela total e a área visível (teclado)
-    const h = window.innerHeight - vv.height;
-    document.documentElement.style.setProperty('--keyboard-h', (h > 60 ? h : 0) + 'px');
+  // ---- Inteligência de Teclado (Mobile) ----
+  if (window.visualViewport) {
+    const vv = window.visualViewport;
+    const updateKeyboard = () => {
+      // Diferença entre a tela total e a área visível (teclado)
+      const h = window.innerHeight - vv.height;
+      document.documentElement.style.setProperty('--keyboard-h', (h > 60 ? h : 0) + 'px');
 
-    // Auto-scroll para o campo focado
-    const active = document.activeElement;
-    if (h > 60 && active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
-      setTimeout(() => active.scrollIntoView({ block: 'center', behavior: 'smooth' }), 150);
-    }
-  };
-  vv.addEventListener('resize', updateKeyboard);
-  vv.addEventListener('scroll', updateKeyboard);
-}
+      // Auto-scroll para o campo focado
+      const active = document.activeElement;
+      if (h > 60 && active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+        setTimeout(() => active.scrollIntoView({ block: 'center', behavior: 'smooth' }), 150);
+      }
+    };
+    vv.addEventListener('resize', updateKeyboard);
+    vv.addEventListener('scroll', updateKeyboard);
+  }
 });
 // ======================== FINANCE LOGIC ========================
 function updateFinanceUI() {
