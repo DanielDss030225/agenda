@@ -1455,7 +1455,7 @@ function openDayModal(d) {
     `;
 
     div.innerHTML = `
-      <button class="btn btn-ghost btn-icon-sm" onclick="window.toggleTransactionStatus('${t.id}', event)" style="color: ${isChecked ? 'var(--primary)' : 'var(--text3)'}; padding: 0; width: 32px; height: 32px; flex-shrink: 0;">
+      <button class="btn btn-ghost btn-icon-sm" onclick="window.toggleTransactionStatus('${t.id}', event, '${t.occurrenceDate}')" style="color: ${isChecked ? 'var(--primary)' : 'var(--text3)'}; padding: 0; width: 32px; height: 32px; flex-shrink: 0;">
         <span class="material-symbols-outlined" style="font-size:24px; font-variation-settings: 'FILL' ${isChecked ? 1 : 0}">${isChecked ? 'check_circle' : 'radio_button_unchecked'}</span>
       </button>
       
@@ -2468,7 +2468,7 @@ function updateFinanceUI() {
       if (t.isIgnored) return;
       if (t.type === 'income') totalInc += t.amount;
       else totalExp += t.amount;
-      if (!allForMonth.some(x => x.id === t.id)) {
+      if (!allForMonth.some(x => x.id === t.id && x.occurrenceDate === t.occurrenceDate)) {
         allForMonth.push(t);
       }
     });
@@ -2512,7 +2512,7 @@ function renderFinanceList(list) {
     div.style = `display:flex; align-items:center; justify-content:space-between; padding:12px; background:var(--surface); border:1px solid var(--border); border-radius:12px; opacity: ${isChecked ? '0.6' : '1'}; transition: all 0.2s;`;
     div.innerHTML = `
       <div style="display:flex; align-items:center; gap:12px;">
-        <button class="btn btn-ghost btn-icon-sm" onclick="window.toggleTransactionStatus('${t.id}', event)" style="color: ${isChecked ? 'var(--primary)' : 'var(--text3)'}; padding: 0; width: 28px; height: 28px;">
+        <button class="btn btn-ghost btn-icon-sm" onclick="window.toggleTransactionStatus('${t.id}', event, '${t.occurrenceDate}')" style="color: ${isChecked ? 'var(--primary)' : 'var(--text3)'}; padding: 0; width: 28px; height: 28px;">
           <span class="material-symbols-outlined" style="font-size:22px; font-variation-settings: 'FILL' ${isChecked ? 1 : 0}">${isChecked ? 'check_circle' : 'radio_button_unchecked'}</span>
         </button>
         <div style="background:${t.type === 'income' ? '#dcfce7' : '#fee2e2'}; color:${t.type === 'income' ? '#166534' : '#991b1b'}; width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center;">
@@ -2628,7 +2628,7 @@ window.deleteTransaction = function (id) {
   });
 };
 
-window.toggleTransactionStatus = async function (id, event) {
+window.toggleTransactionStatus = async function (id, event, dateStr = null) {
   if (event) {
     event.preventDefault();
     event.stopPropagation();
@@ -2636,14 +2636,32 @@ window.toggleTransactionStatus = async function (id, event) {
   const t = S.transactions.find(x => x.id === id);
   if (!t) return;
 
-  const newState = !t.checked;
-  t.checked = newState;
+  const targetDate = dateStr || t.date;
+  const isRecurring = t.recurrence && t.recurrence !== 'none';
+  
+  // Determinar estado atual (prioridade no override)
+  const currentChecked = (t.overrides && t.overrides[targetDate] && t.overrides[targetDate].checked !== undefined)
+    ? t.overrides[targetDate].checked
+    : !!t.checked;
+
+  const newState = !currentChecked;
 
   try {
-    await userRef(`transactions/${id}`).update({ checked: newState });
+    if (isRecurring) {
+      if (!t.overrides) t.overrides = {};
+      if (!t.overrides[targetDate]) t.overrides[targetDate] = {};
+      t.overrides[targetDate].checked = newState;
+      await userRef(`transactions/${id}/overrides/${targetDate}`).update({ checked: newState });
+    } else {
+      t.checked = newState;
+      await userRef(`transactions/${id}`).update({ checked: newState });
+    }
+
     if (!$('modal-finances').classList.contains('hidden')) updateFinanceUI();
     if (!$('modal-day').classList.contains('hidden') && S.selectedDate) openDayModal(S.selectedDate);
-    // Opcional: refreshCalendar() se quiser atualizar os dots no fundo, mas pode ser pesado
+    // Notificamos o calendário para atualizar os dots se necessário
+    S.lastRenderedYear = null;
+    refreshCalendar();
   } catch (err) {
     console.error("Error toggling transaction status:", err);
   }

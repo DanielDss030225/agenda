@@ -713,11 +713,12 @@ body {
 
 .side-menu-content {
   flex: 1;
-  padding: 20px 16px;
+  padding: 0px 0px;
   display: flex;
   flex-direction: column;
   overflow: auto;
   padding-bottom: 100px;
+
 }
 
 .side-menu .header-actions {
@@ -2123,7 +2124,7 @@ body {
   border: none !important;
   border-radius: 0px !important;
   margin: 0px !important;
-  border-bottom: solid 1px rgb(209, 209, 209) !important;
+  border-bottom: solid 1px rgb(231, 231, 231) !important;
   padding-top: 20px !important;
   padding-bottom: 20px !important;
 
@@ -2191,11 +2192,12 @@ body {
   .side-menu.collapsed .header-actions .btn {
     justify-content: center !important;
     padding: 0 !important;
-    width: 48px !important;
-    height: 48px !important;
-    margin: 0 auto 12px !important;
-    border-radius: 16px;
-    border-width: 1px;
+    width: 100% !important;
+    height: 56px !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
   }
 
   .side-menu.collapsed .header-actions .btn span.material-symbols-outlined {
