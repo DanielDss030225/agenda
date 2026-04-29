@@ -364,6 +364,14 @@
   <!-- ===== LANGUAGE PICKER MODAL ===== -->
   <div id="lang-picker-overlay">
     <div class="lp-card">
+      <div id="lp-header" class="modal-header hidden"
+        style="margin-bottom: 20px; padding: 0 0 16px; border-bottom: 1px solid var(--border);">
+        <h3 class="modal-title" data-i18n="btn_lang">Idioma</h3>
+        <button type="button" class="btn btn-ghost btn-icon-sm" onclick="lpClose()">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
       <img src="fundoinvisivel.png" alt="ViewGo" class="lp-logo">
       <h2 class="lp-title">Agenda ViewGo</h2>
       <p class="lp-subtitle">Escolha seu idioma &nbsp;/&nbsp; Choose your language</p>
@@ -635,9 +643,11 @@
     <!-- SIDE MENU -->
     <div id="side-menu" class="side-menu">
       <div class="side-menu-header">
-        <img id="logoMarca" src="fundoinvisivel.png" alt="Logo">
-        <h4 style="margin-left: 15px;">Agenda ViewGo</h4>
-        <button id="btn-close-menu" class="btn btn-ghost btn-icon">
+        <div class="logo-area" style="display: flex; align-items: center; overflow: hidden;">
+          <img id="logoMarca" src="fundoinvisivel.png" alt="Logo">
+          <h4 class="menu-brand-name" style="margin-left: 15px; white-space: nowrap;">Agenda ViewGo</h4>
+        </div>
+        <button id="btn-close-menu" class="btn btn-ghost btn-icon mobile-only">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
@@ -650,12 +660,20 @@
 
           <button id="btn-new-event" class="btn btn-outline btn-full" data-i18n-attr="title" data-i18n="btn_new_title"
             title="Novo Evento">
-            <span class="material-symbols-outlined" style="font-size: 18px;">add</span>
+            <svg xmlns="http://www.w3.org/2000/svg" height="30px" viewBox="0 -960 960 960" width="30px" fill="#000000">
+              <path
+                d="M680-80v-120H560v-80h120v-120h80v120h120v80H760v120h-80Zm-480-80q-33 0-56.5-23.5T120-240v-480q0-33 23.5-56.5T200-800h40v-80h80v80h240v-80h80v80h40q33 0 56.5 23.5T760-720v244q-20-3-40-3t-40 3v-84H200v320h280q0 20 3 40t11 40H200Zm0-480h480v-80H200v80Zm0 0v-80 80Z" />
+            </svg>
             <span data-i18n="btn_new">Novo Evento</span>
           </button>
 
           <button id="btn-new-transaction-side" class="btn btn-outline btn-full" style="margin-bottom: 10px;">
-            <span class="material-symbols-outlined" style="font-size: 18px;">add</span>
+            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#000000">
+              <path
+                d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v240H160v240h400v80H160Zm0-480h640v-80H160v80ZM760-80v-120H640v-80h120v-120h80v120h120v80H840v120h-80ZM160-240v-480 480Z" />
+            </svg>
+
+
             <span data-i18n="btn_new_transaction">Adicionar uma nova transação</span>
           </button>
           <button id="btn-agent-side" class="btn btn-outline btn-full" style="margin-bottom: 10px;">
@@ -689,10 +707,21 @@
             <span data-i18n="finance_title">Finanças</span>
           </button>
           <button id="btn-toggle-global-finance" class="btn btn-outline btn-full" style="margin-bottom: 10px;">
-            <span id="icon-finance-visible" class="material-symbols-outlined"
-              style="margin-right:8px;">visibility</span>
-            <span id="icon-finance-hidden" class="material-symbols-outlined hidden"
-              style="margin-right:8px;">visibility_off</span>
+            <div id="icon-finance-visible" style="margin-right:8px; display: flex; align-items:center;">
+              <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px"
+                fill="currentColor">
+                <path
+                  d="M320-414v-306h120v306l-60-56-60 56Zm200 60v-526h120v406L520-354ZM120-216v-344h120v224L120-216Zm0 98 258-258 142 122 224-224h-64v-80h200v200h-80v-64L524-146 382-268 232-118H120Z" />
+              </svg>
+            </div>
+            <div id="icon-finance-hidden" class="hidden"
+              style="margin-right:8px; display: flex; align-items:center; opacity: 0.5;">
+              <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px"
+                fill="currentColor">
+                <path
+                  d="M320-414v-306h120v306l-60-56-60 56Zm200 60v-526h120v406L520-354ZM120-216v-344h120v224L120-216Zm0 98 258-258 142 122 224-224h-64v-80h200v200h-80v-64L524-146 382-268 232-118H120Z" />
+              </svg>
+            </div>
             <span data-i18n="btn_toggle_finance">Resumo Financeiro</span>
           </button>
 
@@ -710,7 +739,7 @@
           </button>
           <div style="flex: 1; height: 1px; background-color: var(--border); margin-top: 10px; margin-bottom: 20px;">
           </div>
-          <div class="agent-intro-card" onclick="goToAgent()"
+          <div class="agent-intro-card hidden" onclick="goToAgent()"
             style="cursor: pointer; background: var(--bg); padding: 20px; border-radius: 20px; border: 1px solid var(--border); display: flex; align-items: flex-start; gap: 16px; transition: transform 0.2s; margin-bottom: 24px;">
             <div
               style="background: var(--primary); padding: 12px; border-radius: 14px; display: flex; align-items: center; justify-content: center;">
@@ -725,7 +754,8 @@
           </div>
 
           <!-- TUTORIAL SECTION -->
-          <div style="background: var(--surface); padding: 20px; border-radius: 20px; border: 1px solid var(--border);">
+          <div class="hidden"
+            style="background: var(--surface); padding: 20px; border-radius: 20px; border: 1px solid var(--border);">
             <h6 data-i18n="tutorial_title"
               style="margin: 0 0 16px; font-size: 1rem; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px;">
             </h6>
@@ -776,9 +806,16 @@
 
         <!-- SCALE BAR (Now with Menu Toggle on the Left) -->
         <div id="scale-bar" class="scale-bar hidden">
-          <button id="btn-open-menu" class="btn btn-ghost btn-icon" style="margin-right: 4px;">
+          <!-- Botão de colapsar no Desktop (Estilizado via CSS) -->
+          <button id="btn-collapse-sidebar" class="btn btn-icon desktop-only" title="Recolher Menu">
+            <span class="material-symbols-outlined">menu_open</span>
+          </button>
+
+          <button id="btn-open-menu" class="btn btn-ghost btn-icon mobile-only" style="margin-right: 4px;">
             <span class="material-symbols-outlined">menu</span>
           </button>
+
+
 
           <div class="scale-left">
             <button id="btn-scale-settings" class="btn btn-ghost-violet btn-sm">
@@ -802,6 +839,29 @@
                 <span data-i18n="btn_ai">IA</span>
               </button>
             </div>
+          </div>
+
+          <div class="scale-right" style="display: flex; align-items: center; gap: 4px;">
+            <button id="btn-shortcut-sound" class="btn btn-ghost btn-icon" title="Sons">
+              <span id="shortcut-icon-sound-on" class="material-symbols-outlined">volume_up</span>
+              <span id="shortcut-icon-sound-off" class="material-symbols-outlined hidden">volume_off</span>
+            </button>
+            <button id="btn-shortcut-finance" class="btn btn-ghost btn-icon" title="Financeiro">
+              <div id="shortcut-icon-finance-on">
+                <svg xmlns="http://www.w3.org/2000/svg" height="22px" viewBox="0 -960 960 960" width="22px"
+                  fill="currentColor">
+                  <path
+                    d="M320-414v-306h120v306l-60-56-60 56Zm200 60v-526h120v406L520-354ZM120-216v-344h120v224L120-216Zm0 98 258-258 142 122 224-224h-64v-80h200v200h-80v-64L524-146 382-268 232-118H120Z" />
+                </svg>
+              </div>
+              <div id="shortcut-icon-finance-off" class="hidden" style="opacity: 0.5;">
+                <svg xmlns="http://www.w3.org/2000/svg" height="22px" viewBox="0 -960 960 960" width="22px"
+                  fill="currentColor">
+                  <path
+                    d="M320-414v-306h120v306l-60-56-60 56Zm200 60v-526h120v406L520-354ZM120-216v-344h120v224L120-216Zm0 98 258-258 142 122 224-224h-64v-80h200v200h-80v-64L524-146 382-268 232-118H120Z" />
+                </svg>
+              </div>
+            </button>
           </div>
         </div>
 
@@ -1478,10 +1538,23 @@
 
       window.openLangPicker = function () {
         overlay.style.display = 'flex';
-        // Se já tiver idioma, seleciona o botão correspondente
+        // Se já tiver idioma, seleciona o botão correspondente e mostra botão fechar
         const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) lpSelect(saved);
+        if (saved) {
+          lpSelect(saved);
+          document.getElementById('lp-header')?.classList.remove('hidden');
+        } else {
+          document.getElementById('lp-header')?.classList.add('hidden');
+        }
         if (typeof toggleSideMenu === 'function') toggleSideMenu(false);
+      };
+
+      window.lpClose = function () {
+        overlay.classList.add('hide');
+        setTimeout(() => {
+          overlay.style.display = 'none';
+          overlay.classList.remove('hide');
+        }, 300);
       };
 
       window.lpSelect = function (lang) {
@@ -1686,6 +1759,9 @@
     </button>
   </div>
 
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
 </body>
 
 </html>

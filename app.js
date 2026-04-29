@@ -560,6 +560,19 @@ function initApp() {
     if (typeof i18n !== 'undefined') i18n.applyToDOM();
     updateSoundIcon();
     runOnboardingFlow();
+
+    // Inicializa estado do sidebar no Desktop
+    if (localStorage.getItem('agbizu_sidebar_collapsed') === 'true' && window.innerWidth >= 900) {
+      document.getElementById('side-menu')?.classList.add('collapsed');
+      const sideBtnIcon = document.querySelector('#btn-collapse-sidebar span');
+      if (sideBtnIcon) sideBtnIcon.style.transform = 'rotate(180deg)';
+    }
+
+    // Pequeno delay para não sobrepor outras modais iniciais
+    setTimeout(() => {
+      showPromotionalToasts();
+    }, 1500);
+
     hideLoading();
     console.log("[DEBUG] initApp finalizado com sucesso");
   } catch (err) {
@@ -928,11 +941,22 @@ function show(id) {
 function hide(id) { const el = $(id); if (el) el.classList.add('hidden'); }
 const catColor = (cat) => ({ evento: '#3b82f6', aniversario: '#ec4899', trabalho: '#22c55e', pessoal: '#a855f7', saude: '#ef4444', estudo: '#f59e0b' })[cat] || '#3b82f6';
 
+let lastModalOpen = 0;
 function openModal(id) {
-  $(id)?.classList.remove('hidden');
-  play('modal');
-  if (typeof window.hideAgentFab === 'function') window.hideAgentFab();
-  trackAction('open_modal_' + id);
+  const now = Date.now();
+  if (now - lastModalOpen < 400) return;
+  lastModalOpen = now;
+
+  // Garantir que nenhum outro modal esteja aberto antes de abrir o novo
+  window.closeAnyModal();
+
+  const el = $(id);
+  if (el) {
+    el.classList.remove('hidden');
+    play('modal');
+    if (typeof window.hideAgentFab === 'function') window.hideAgentFab();
+    trackAction('open_modal_' + id);
+  }
 }
 
 function closeModal(id) {
@@ -1316,33 +1340,65 @@ function truncate(str, len = 20) {
 }
 
 // ======================== MODALS & ACTIONS ========================
-function buildEventItem(ev, withActions = true) {
+function buildEventItem(ev, withActions = true, showDate = false, contextDate = null) {
+  const t = (k) => typeof i18n !== 'undefined' ? i18n.t(k) : k;
+  const locale = typeof i18n !== 'undefined' ? i18n.t('locale') : 'pt-BR';
   const wrap = document.createElement('div');
   wrap.className = 'event-item';
+  if (ev.isIgnored) wrap.style.opacity = '0.5';
+
+  let dateHtml = '';
+  if (showDate && ev.date) {
+    const d = new Date(ev.date + 'T12:00:00');
+    const formattedDate = d.toLocaleDateString(locale, { day: '2-digit', month: '2-digit' });
+    dateHtml = `
+      <div style="display:flex; align-items:center; gap:4px; font-size:0.75rem; color:var(--primary); font-weight:700; background: var(--primary-lt); padding: 2px 8px; border-radius: 12px; flex-shrink: 0;">
+        <span class="material-symbols-outlined" style="font-size:14px;">calendar_today</span>
+        ${formattedDate}
+      </div>`;
+  }
+
   wrap.innerHTML = `
     <div class="event-stripe" style="background:${catColor(ev.category)}"></div>
     <div class="event-body">
-      <div class="event-title">${escHtml(ev.title)}</div>
+      <div style="display:flex; align-items:center; justify-content: space-between; gap: 8px;">
+        <div class="event-title" style="${ev.isIgnored ? 'text-decoration: line-through;' : ''}">${escHtml(ev.title)}</div>
+        ${dateHtml}
+      </div>
       <div class="event-meta">
         ${ev.time ? `<span class="material-symbols-outlined" style="font-size:16px;">schedule</span> <span>${ev.time}</span>` : ''}
         ${ev.category ? `<span style="opacity:0.8;">• ${ev.category}</span>` : ''}
         ${ev.recurrence && ev.recurrence !== 'none' ? '<span class="material-symbols-outlined" style="font-size:16px;">sync</span>' : ''}
       </div>
-      ${ev.description ? `<div class="event-meta" style="margin-top:4px; font-size:0.65rem; opacity:0.8;">${escHtml(ev.description)}</div>` : ''}
+      ${ev.description ? `<div class="event-description">${escHtml(ev.description)}</div>` : ''}
+      ${ev.isIgnored ? `
+        <div style="display:flex; align-items:center; gap:4px; color:var(--danger); font-size:0.65rem; font-weight:700; margin-top:4px;">
+          <span class="material-symbols-outlined" style="font-size:12px;">event_busy</span>
+          <span>${t('ignored_instance_badge')}</span>
+        </div>` : ''}
     </div>
     ${withActions ? `
     <div class="event-actions">
-      <button class="btn btn-ghost btn-icon-sm" onclick="editEvent('${ev.id}')">
+      <button class="btn btn-ghost btn-icon-sm" onclick="event.stopPropagation(); editEvent('${ev.id}', ${contextDate ? `'${contextDate.toISOString().split('T')[0]}'` : 'null'})">
         <span class="material-symbols-outlined" style="font-size:20px;">edit</span>
       </button>
-      <button class="btn btn-ghost btn-icon-sm" onclick="delEvent('${ev.id}')">
+      <button class="btn btn-ghost btn-icon-sm" onclick="event.stopPropagation(); delEvent('${ev.id}', ${contextDate ? `'${contextDate.toISOString().split('T')[0]}'` : 'null'})">
         <span class="material-symbols-outlined" style="font-size:20px; color:var(--danger);">delete</span>
       </button>
     </div>` : ''}
   `;
-  if (!withActions) {
-    wrap.onclick = () => { closeModal('modal-search'); openEventForm(ev); };
-  }
+
+  wrap.onclick = (e) => {
+    if (withActions) {
+      S.editingEventId = ev.id;
+      openEventForm(ev, contextDate);
+    } else {
+      if (document.getElementById('modal-search')) closeModal('modal-search');
+      if (document.getElementById('modal-day')) closeModal('modal-day');
+      openEventForm(ev);
+    }
+  };
+
   return wrap;
 }
 
@@ -1369,70 +1425,7 @@ function openDayModal(d) {
   const evList = $('day-events-list');
   evList.innerHTML = evs.length ? '' : `<p class="empty-state">${typeof i18n !== 'undefined' ? i18n.t('search_no_results') : 'Sem eventos'}</p>`;
   evs.forEach(ev => {
-    const color = catColor(ev.category || 'evento');
-    const iconName = ({ evento: 'event', aniversario: 'cake', trabalho: 'work', pessoal: 'person', saude: 'favorite', estudo: 'school' })[ev.category] || 'event';
-
-    const div = document.createElement('div');
-    div.className = 'event-item';
-    div.style = `
-      position: relative;
-      padding: 12px 16px;
-      padding-left: 20px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-left: 4px solid ${color};
-      border-radius: 16px;
-      margin-bottom: 12px;
-      cursor: pointer;
-      opacity: ${ev.isIgnored ? '0.5' : '1'};
-      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-      transition: transform 0.2s, box-shadow 0.2s;
-    `;
-
-    div.innerHTML = `
-      <div id="cardtime">
-        <div style="display:flex; align-items:center; gap:10px; flex: 1; overflow: hidden;">
-          <span class="material-symbols-outlined" style="font-size:20px; color:${color}; flex-shrink: 0;">${iconName}</span>
-          <div class="event-item-title" style="font-size:1.05rem; font-weight:800; color:var(--text); text-decoration: ${ev.isIgnored ? 'line-through' : 'none'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-            ${truncate(ev.title)}
-          </div>
-        </div>
-        
-        ${ev.time ? `
-          <div style="display:flex; align-items:center; gap:4px; font-size:0.8rem; color:var(--primary); font-weight:700; background: var(--primary-lt); padding: 4px 10px; border-radius: 20px; flex-shrink: 0; margin-left: 10px;">
-            <span class="material-symbols-outlined" style="font-size:14px;">schedule</span>
-            ${ev.time}
-          </div>
-          
-          <div style="display:flex; align-items:center; gap:4px; opacity: 0.5; margin-left:10px;">
-            <span class="material-symbols-outlined" style="font-size:12px;">calendar_today</span>
-            <span style="font-size:0.65rem; font-weight:600;">${new Date(ev.date + 'T12:00:00').toLocaleDateString()}</span>
-         </div>
-
-
-        ` : ''}
-      </div>
-
-      ${ev.description ? `
-        <div style="font-size:0.85rem; color:var(--text2); line-height:1.5; background: rgba(0,0,0,0.02); padding: 10px; border-radius: 12px; margin-bottom: 8px; border-left: 2px solid var(--border);">
-          ${truncate(ev.description)}
-        </div>
-      ` : ''}
-      
-      <div style="display:flex; justify-content:between; align-items:center; margin-top:4px;">
-         <div style="flex:1;">
-            ${ev.isIgnored ? `
-              <div style="display:flex; align-items:center; gap:4px; color:var(--danger); font-size:0.7rem; font-weight:700;">
-                <span class="material-symbols-outlined" style="font-size:14px;">event_busy</span>
-                <span data-i18n="ignored_instance_badge">${typeof i18n !== 'undefined' ? i18n.t('ignored_instance_badge') : 'DESCONSIDERADO'}</span>
-              </div>
-            ` : ''}
-         </div>
-        
-      </div>
-    `;
-    div.onclick = () => { closeModal('modal-day'); S.editingEventId = ev.id; openEventForm(ev, d); };
-    evList.appendChild(div);
+    evList.appendChild(buildEventItem(ev, true, true, d));
   });
 
   // Finanças
@@ -1512,6 +1505,9 @@ window.delEvent = async (id) => {
 };
 
 function openEventForm(evt, clickedDate = null) {
+  // Garantir que nenhum outro modal esteja aberto
+  window.closeAnyModal();
+
   const isNew = !evt;
   S.editingEventId = isNew ? null : evt.id;
   S.editingOccurrenceDate = clickedDate ? toDateStr(clickedDate) : (evt ? evt.date : toDateStr(new Date()));
@@ -1826,12 +1822,33 @@ window.setOnboardingSound = (enabled) => {
   play('click');
 };
 
-// ======================== SEARCH ========================
+// ======================== SEARCH & PAGINATION ========================
+S.searchState = {
+  results: [],
+  page: 0,
+  pageSize: 10
+};
+
 function renderSearch(query) {
   const t = (k) => typeof i18n !== 'undefined' ? i18n.t(k) : k;
   const locale = typeof i18n !== 'undefined' ? i18n.t('locale') : 'pt-BR';
-  const q = query.toLowerCase();
-  const results = S.events.filter(ev => {
+  const q = query.trim().toLowerCase();
+  
+  const countEl = $('events-count');
+  const resultsEl = $('search-results');
+  resultsEl.innerHTML = '';
+  
+  if (!q) {
+    if (countEl) countEl.style.display = "none";
+    return;
+  }
+
+  if (countEl) {
+    countEl.style.display = "flex";
+    countEl.style.gap = "5px";
+  }
+
+  const filtered = S.events.filter(ev => {
     const d = new Date(ev.date + 'T12:00:00');
     return (
       ev.title.toLowerCase().includes(q) ||
@@ -1841,18 +1858,63 @@ function renderSearch(query) {
     );
   }).sort((a, b) => a.date.localeCompare(b.date));
 
-  const el = $('search-results');
-  el.innerHTML = '';
-  if (!q) { el.innerHTML = `<div class="no-events">${t('search_empty')}</div>`; return; }
-  if (!results.length) { el.innerHTML = `<div class="no-events">${t('search_no_results')}</div>`; return; }
+  if (!filtered.length) {
+    if (countEl) countEl.innerHTML = `0 <span data-i18n="events_count_zero">${t('events_count_zero')}</span>`;
+    resultsEl.innerHTML = `<div class="no-events">${t('search_no_results')}</div>`;
+    return;
+  }
 
+  // Deduplicar mantendo ordem original
+  const dedupedFull = [];
   const seen = new Set();
-  results.forEach(ev => {
+  filtered.forEach(ev => {
     const rootId = ev.parentEventId || ev.id;
-    if (seen.has(rootId)) return;
-    seen.add(rootId);
-    el.appendChild(buildEventItem(ev, false));
+    if (!seen.has(rootId)) {
+      seen.add(rootId);
+      dedupedFull.push(ev);
+    }
   });
+
+  S.searchState.results = dedupedFull;
+  S.searchState.page = 0;
+  
+  if (countEl) {
+    countEl.innerHTML = `${dedupedFull.length} <span data-i18n="events_count_zero">${t('events_count_zero')}</span>`;
+    if (typeof i18n !== 'undefined') i18n.applyToDOM();
+  }
+
+  renderSearchPage();
+}
+
+function renderSearchPage() {
+  const resultsEl = $('search-results');
+  const btnMore = $('btn-load-more-search');
+  if (btnMore) btnMore.remove();
+
+  const start = S.searchState.page * S.searchState.pageSize;
+  const end = start + S.searchState.pageSize;
+  const items = S.searchState.results.slice(start, end);
+
+  items.forEach(ev => {
+    resultsEl.appendChild(buildEventItem(ev, false, true));
+  });
+
+  if (end < S.searchState.results.length) {
+    const loadMoreBtn = document.createElement('button');
+    loadMoreBtn.id = 'btn-load-more-search';
+    loadMoreBtn.className = 'btn btn-outline btn-full';
+    loadMoreBtn.style.marginTop = '16px';
+    loadMoreBtn.style.marginBottom = '24px';
+    loadMoreBtn.innerHTML = `
+      <span class="material-symbols-outlined" style="font-size:18px;">expand_more</span>
+      <span>Carregar Mais</span>
+    `;
+    loadMoreBtn.onclick = () => {
+      S.searchState.page++;
+      renderSearchPage();
+    };
+    resultsEl.appendChild(loadMoreBtn);
+  }
 }
 
 // Mensagem Diária e Onboarding Sequencial
@@ -1896,10 +1958,14 @@ function checkDailyMessage() {
 }
 
 function updateSoundIcon() {
-  $('icon-sound-on').classList.toggle('hidden', !S.soundsEnabled);
-  $('icon-sound-off').classList.toggle('hidden', S.soundsEnabled);
-  // Persiste no localStorage para sincronizar com o iframe do agente
-  localStorage.setItem('agbizu_sounds_enabled', S.soundsEnabled);
+  const on = S.soundsEnabled;
+  if ($('icon-sound-on')) $('icon-sound-on').classList.toggle('hidden', !on);
+  if ($('icon-sound-off')) $('icon-sound-off').classList.toggle('hidden', on);
+
+  if ($('shortcut-icon-sound-on')) $('shortcut-icon-sound-on').classList.toggle('hidden', !on);
+  if ($('shortcut-icon-sound-off')) $('shortcut-icon-sound-off').classList.toggle('hidden', on);
+
+  localStorage.setItem('agbizu_sounds_enabled', on);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1937,6 +2003,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   $('btn-add-from-day').onclick = () => { closeModal('modal-day'); openEventForm(); };
   $('btn-toggle-sound').onclick = () => { S.soundsEnabled = !S.soundsEnabled; updateSoundIcon(); saveProfile(); };
+  if ($('btn-shortcut-sound')) {
+    $('btn-shortcut-sound').onclick = () => { S.soundsEnabled = !S.soundsEnabled; updateSoundIcon(); saveProfile(); };
+  }
   if ($('btn-logout')) $('btn-logout').onclick = () => { window.closeAnyModal(); openModal('modal-logout'); };
   if ($('btn-confirm-logout')) $('btn-confirm-logout').onclick = () => logout();
   if ($('btn-cancel-logout')) $('btn-cancel-logout').onclick = () => closeModal('modal-logout');
@@ -1949,6 +2018,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   $('btn-open-menu').onclick = () => toggleSideMenu(true);
   $('btn-close-menu').onclick = () => toggleSideMenu(false);
+  if ($('btn-collapse-sidebar')) {
+    $('btn-collapse-sidebar').onclick = () => window.toggleSidebar();
+  }
   $('side-menu-overlay').onclick = () => toggleSideMenu(false);
   $('btn-lang-picker').onclick = () => { window.closeAnyModal(); window.openLangPicker(); };
 
@@ -2080,15 +2152,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const container = $('finance-global-summary-container');
     const iconVisible = $('icon-finance-visible');
     const iconHidden = $('icon-finance-hidden');
+    const shortVisible = $('shortcut-icon-finance-on');
+    const shortHidden = $('shortcut-icon-finance-off');
 
     if (S.showGlobalFinance) {
       if (container) container.style.display = 'block';
       if (iconVisible) iconVisible.classList.remove('hidden');
       if (iconHidden) iconHidden.classList.add('hidden');
+      if (shortVisible) shortVisible.classList.remove('hidden');
+      if (shortHidden) shortHidden.classList.add('hidden');
     } else {
       if (container) container.style.display = 'none';
       if (iconVisible) iconVisible.classList.add('hidden');
       if (iconHidden) iconHidden.classList.remove('hidden');
+      if (shortVisible) shortVisible.classList.add('hidden');
+      if (shortHidden) shortHidden.classList.remove('hidden');
     }
     localStorage.setItem('agbizu_show_global_finance', S.showGlobalFinance);
   };
@@ -2100,7 +2178,14 @@ document.addEventListener('DOMContentLoaded', () => {
       S.showGlobalFinance = !S.showGlobalFinance;
       window.updateGlobalFinanceVisibility();
       play('click');
+    };
+  }
 
+  if ($('btn-shortcut-finance')) {
+    $('btn-shortcut-finance').onclick = () => {
+      S.showGlobalFinance = !S.showGlobalFinance;
+      window.updateGlobalFinanceVisibility();
+      play('click');
     };
   }
 
@@ -2459,6 +2544,7 @@ function renderFinanceList(list) {
 }
 
 window.openTransactionForm = function (d = null, trans = null) {
+  window.closeAnyModal();
   console.log("[DEBUG] openTransactionForm executada", { d, trans });
   const form = $('transaction-form');
   if (!form) return;
@@ -2642,5 +2728,139 @@ window.ignoreTransactionInstance = async function (id, dateStr) {
 window.goToAgent = () => {
   toggleSideMenu(false);
   trackAction('open_ai_agent');
-  window.location.href = 'agent.html';
+  { toggleSideMenu(false); setView('ai'); };
+};
+
+// ======================== TOAST NOTIFICATIONS ========================
+function createToast(options = {}) {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.dataset.toastId = options.id;
+
+  const t = (k) => typeof i18n !== 'undefined' ? i18n.t(k) : k;
+
+  toast.innerHTML = `
+    <div class="toast-header">
+      <div class="toast-icon ${options.type || ''}">
+        <span class="material-symbols-outlined">${options.icon || 'info'}</span>
+      </div>
+      <div class="toast-content">
+        <div class="toast-title">${options.title || ''}</div>
+        <div class="toast-msg">${options.message || ''}</div>
+      </div>
+    </div>
+    <div class="toast-footer">
+      <label class="toast-checkbox-wrapper">
+        <input type="checkbox" id="toast-dont-show-${options.id}">
+        <span class="toast-checkbox-label">${t('toast_dont_show_again')}</span>
+      </label>
+      <div class="toast-buttons">
+        ${options.secondaryBtn ? `<button class="toast-btn ghost" id="toast-btn-sec-${options.id}">${options.secondaryBtn}</button>` : ''}
+        <button class="toast-btn primary" id="toast-btn-main-${options.id}">${options.primaryBtn || 'OK'}</button>
+      </div>
+    </div>
+  `;
+
+  container.appendChild(toast);
+
+  // Event Listeners
+  const mainBtn = toast.querySelector(`#toast-btn-main-${options.id}`);
+  const secBtn = toast.querySelector(`#toast-btn-sec-${options.id}`);
+  const checkbox = toast.querySelector(`#toast-dont-show-${options.id}`);
+
+  const dismiss = () => {
+    // Dispensar todos os toasts do container simultaneamente
+    const allToasts = container.querySelectorAll('.toast');
+    allToasts.forEach(t => {
+      // Verifica o checkbox de cada toast individualmente antes de remover
+      const cb = t.querySelector('input[type="checkbox"]');
+      const tid = t.dataset.toastId;
+      if (cb && cb.checked && tid) {
+        localStorage.setItem(`agbizu_dismiss_toast_${tid}`, 'true');
+      }
+
+      t.classList.add('hiding');
+      setTimeout(() => t.remove(), 250);
+    });
+  };
+
+  mainBtn.onclick = () => {
+    if (options.onPrimary) options.onPrimary();
+    dismiss();
+  };
+
+  if (secBtn) {
+    secBtn.onclick = () => {
+      if (options.onSecondary) options.onSecondary();
+      dismiss();
+    };
+  }
+
+  // Auto-dismiss opcional? Não por enquanto, melhor deixar o usuário ver.
+  return toast;
+}
+
+function showPromotionalToasts() {
+  const t = (k) => typeof i18n !== 'undefined' ? i18n.t(k) : k;
+
+  // 1. Toast da IA
+  if (!localStorage.getItem('agbizu_dismiss_toast_ia')) {
+    createToast({
+      id: 'ia',
+      type: 'ia',
+      icon: 'smart_toy',
+      title: t('toast_ia_title'),
+      message: t('toast_ia_desc'),
+      primaryBtn: t('toast_btn_open'),
+      secondaryBtn: t('btn_cancel'),
+      onPrimary: () => {
+        setView('ai');
+      }
+    });
+  }
+
+  // 2. Toast da Escala (após um pequeno delay se o da IA estiver visível)
+  setTimeout(() => {
+    if (!localStorage.getItem('agbizu_dismiss_toast_scale')) {
+      createToast({
+        id: 'scale',
+        type: 'tutorial',
+        icon: 'calendar_month',
+        title: t('toast_scale_title'),
+        message: t('toast_scale_desc'),
+        primaryBtn: t('toast_btn_scale'),
+        secondaryBtn: t('toast_btn_ok'),
+        onPrimary: () => {
+          openScaleModal();
+        }
+      });
+    }
+  }, 1000);
+}
+
+// ======================== SIDEBAR COLLAPSE ========================
+window.toggleSidebar = (collapsed = null) => {
+  const menu = document.getElementById('side-menu');
+  const btn = document.getElementById('btn-collapse-sidebar');
+  if (!menu) return;
+
+  if (collapsed === null) {
+    collapsed = !menu.classList.contains('collapsed');
+  }
+
+  menu.classList.toggle('collapsed', collapsed);
+
+  // Atualiza ícone do botão (rotação)
+  if (btn) {
+    const icon = btn.querySelector('span');
+    if (icon) icon.style.transform = collapsed ? 'rotate(180deg)' : 'rotate(0deg)';
+  }
+
+  localStorage.setItem('agbizu_sidebar_collapsed', collapsed);
+
+  // Forçar redimensionamento para alinhar componentes (ex: swiper)
+  setTimeout(() => window.dispatchEvent(new Event('resize')), 300);
 };

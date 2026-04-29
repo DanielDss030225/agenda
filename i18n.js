@@ -138,7 +138,7 @@ const TRANSLATIONS = {
     tutorial_off_dot: 'Folga',
 
     // ---- Finance Modal ----
-    finance_title: 'Controle Financeiro',
+    finance_title: 'Transações do Mês',
     finance_income: 'Receitas',
     finance_expenses: 'Despesas',
     finance_balance: 'Final',
@@ -155,7 +155,7 @@ const TRANSLATIONS = {
     finance_empty: 'Nenhuma transação este mês.',
     btn_save_transaction: 'Salvar Transação',
     finance_month_summary: 'Resumo de',
-    finance_title: 'Controle Financeiro',
+    finance_title: 'Transações do Mês',
     btn_scale: 'Minha Escala',
     btn_toggle_finance: 'Finance Bar',
 
@@ -262,6 +262,14 @@ const TRANSLATIONS = {
     tutorial_legend: 'Ponto colorido indica seu status na escala.',
     tutorial_swipe: 'Arraste lateralmente para mudar o mês.',
     tutorial_event: 'Toque em um dia para ver detalhes ou add eventos.',
+    toast_ia_title: 'Diga Oi para a sua IA',
+    toast_ia_desc: 'Sua assistente inteligente está ativada. Peça ajuda com escalas, piadas ou dicas!',
+    toast_scale_title: 'Configure sua Escala',
+    toast_scale_desc: 'Os círculos vermelhos indicam trabalho e os verdes folga. Clique no botão de calendário acima para definir sua escala mensal.',
+    toast_dont_show_again: 'Não mostrar novamente',
+    toast_btn_open: 'Abrir',
+    toast_btn_scale: 'Configurar',
+    toast_btn_ok: 'Certo!',
 
     // ---- Mensagens Bíblicas Diárias ----
     daily_messages: [
@@ -431,7 +439,7 @@ const TRANSLATIONS = {
     tutorial_off_dot: 'Day off',
 
     // ---- Finance Modal ----
-    finance_title: 'Financial control',
+    finance_title: 'Month Transactions',
     finance_income: 'Income',
     finance_expenses: 'Expenses',
     finance_balance: 'Final',
@@ -448,7 +456,7 @@ const TRANSLATIONS = {
     finance_empty: 'No transactions this month.',
     btn_save_transaction: 'Save transaction',
     finance_month_summary: 'Summary of',
-    finance_title: 'Financial Control',
+    finance_title: 'Month Transactions',
     btn_scale: 'My Scale',
     btn_toggle_finance: 'Finance Bar',
 
@@ -554,6 +562,14 @@ const TRANSLATIONS = {
     tutorial_legend: 'Colored dots show your schedule status.',
     tutorial_swipe: 'Swipe sideways to change the month.',
     tutorial_event: 'Tap a day to see details or add events.',
+    toast_ia_title: 'Say Hello to your AI',
+    toast_ia_desc: 'Your smart assistant is active. Ask for help with schedules, jokes, or tips!',
+    toast_scale_title: 'Set up your Schedule',
+    toast_scale_desc: 'Red dots indicate work and green dots represent off days. Click the calendar button above to set your monthly rotation.',
+    toast_dont_show_again: "Don't show again",
+    toast_btn_open: 'Open',
+    toast_btn_scale: 'Set Schedule',
+    toast_btn_ok: 'Got it!',
 
     // ---- Daily Bible Messages ----
     daily_messages: [
