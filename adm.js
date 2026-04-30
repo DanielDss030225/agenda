@@ -1,13 +1,13 @@
 'use strict';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyASa8uMK4O1U_bQC5Ykl-OflJttFSJFNnM",
-  authDomain: "orange-proof.firebaseapp.com",
-  databaseURL: "https://orange-proof-default-rtdb.firebaseio.com",
-  projectId: "orange-proof",
-  storageBucket: "orange-proof.firebasestorage.app",
-  messagingSenderId: "619099154724",
-  appId: "1:619099154724:web:e61ff7ce22e29be929ebb1"
+    apiKey: "AIzaSyASa8uMK4O1U_bQC5Ykl-OflJttFSJFNnM",
+    authDomain: "orange-proof.firebaseapp.com",
+    databaseURL: "https://orange-proof-default-rtdb.firebaseio.com",
+    projectId: "orange-proof",
+    storageBucket: "orange-proof.firebasestorage.app",
+    messagingSenderId: "619099154724",
+    appId: "1:619099154724:web:e61ff7ce22e29be929ebb1"
 };
 
 // Initialize Firebase
@@ -40,13 +40,13 @@ async function loadDashboard() {
     try {
         const snap = await db.ref('users').once('value');
         allUsers = snap.val() || {};
-        
+
         const userList = Object.entries(allUsers).map(([id, data]) => ({ id, ...data }));
         const today = new Date().toISOString().split('T')[0];
-        
+
         // Update stats
         document.getElementById('total-users-val').textContent = userList.length;
-        
+
         let totalActionsToday = 0;
         userList.forEach(u => {
             if (u.stats && u.stats.dailyActions && u.stats.dailyActions[today]) {
@@ -73,7 +73,7 @@ function renderUserGrid(users) {
         card.innerHTML = `
             <div class="user-avatar">${char}</div>
             <div class="user-info">
-                <h3>${user.displayName || 'Sem Nome'}</h3>
+                <div>${user.displayName || 'Sem Nome'}</div>
                 <p>${user.email || 'Sem Email'}</p>
             </div>
         `;
@@ -87,7 +87,7 @@ function formatTime(seconds) {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     const s = seconds % 60;
-    
+
     let res = '';
     if (h > 0) res += h + 'h ';
     if (m > 0 || h > 0) res += m + 'm ';
@@ -112,9 +112,9 @@ function openUserModal(userId) {
 
     const actionsContainer = document.getElementById('modal-user-actions');
     actionsContainer.innerHTML = '';
-    
+
     if (user.stats && user.stats.actions) {
-        Object.entries(user.stats.actions).sort((a,b) => b[1] - a[1]).forEach(([action, count]) => {
+        Object.entries(user.stats.actions).sort((a, b) => b[1] - a[1]).forEach(([action, count]) => {
             const chip = document.createElement('div');
             chip.className = 'action-chip';
             chip.innerHTML = `
@@ -150,7 +150,7 @@ async function resetUserPassword() {
 async function saveUserInfo() {
     if (!currentModalUserId) return;
     const newName = document.getElementById('modal-user-name-input').value.trim();
-    
+
     if (!newName) {
         alert("O nome não pode estar vazio.");
         return;
@@ -169,9 +169,9 @@ async function saveUserInfo() {
 async function deleteUser() {
     if (!currentModalUserId) return;
     const user = allUsers[currentModalUserId];
-    
+
     const confirmMsg = `ATENÇÃO: Isso apagará todos os dados de ${user.displayName || user.email} da base de dados.\n\nEsta ação NÃO pode ser desfeita. Deseja continuar?`;
-    
+
     if (!confirm(confirmMsg)) return;
 
     try {
@@ -189,7 +189,7 @@ function openActionsModal() {
     const list = document.getElementById('active-users-list');
     list.innerHTML = '';
     const today = new Date().toISOString().split('T')[0];
-    
+
     const activeUsers = Object.entries(allUsers).filter(([id, data]) => {
         return data.stats && data.stats.dailyActions && data.stats.dailyActions[today];
     });
@@ -200,15 +200,15 @@ function openActionsModal() {
         activeUsers.forEach(([id, data]) => {
             let userActionsToday = 0;
             Object.values(data.stats.dailyActions[today]).forEach(c => userActionsToday += c);
-            
+
             const div = document.createElement('div');
             div.className = 'user-card';
             div.style.padding = '12px';
             div.innerHTML = `
                 <div class="user-avatar" style="width:36px; height:36px; font-size:0.9rem;">${(data.displayName || data.email || '?').charAt(0).toUpperCase()}</div>
                 <div class="user-info">
-                    <h3 style="font-size:0.85rem;">${data.displayName || 'Sem Nome'}</h3>
-                    <p style="font-size:0.7rem; color:var(--primary); font-weight:700;">${userActionsToday} ações hoje</p>
+                    <div style="font-size:0.85rem;">${data.displayName || 'Sem Nome'}</div>
+                    <p style="font-size:0.7rem; color:var(--primary); ">${userActionsToday} ações hoje</p>
                 </div>
             `;
             div.onclick = () => { closeActionsModal(); openUserModal(id); };
@@ -228,7 +228,7 @@ function closeUserModal() {
 }
 
 // Close modal on click outside
-window.onclick = function(event) {
+window.onclick = function (event) {
     const modal = document.getElementById('user-modal');
     if (event.target === modal) {
         closeUserModal();

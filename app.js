@@ -129,8 +129,8 @@ function showLoading(msgKey = 'loading_wait') {
   if (!el) {
     el = document.createElement('div');
     el.id = 'firebase-loading';
-    el.style.cssText = `position:fixed;inset:0;background:#ffffff;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;gap:14px;font-family:Inter,sans-serif;`;
-    el.innerHTML = `<img class="imgGif" src="aberturaGif.gif" ><p id="fb-load-msg" style="color:#374151;font-size:.95rem;font-weight:500;margin-top:10px;">${msg}</p>`;
+    el.style.cssText = `position:fixed;inset:0;background:#ffffff;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;gap:14px;font-family:var(--font);`;
+    el.innerHTML = `<img class="imgGif" src="aberturaGif.gif" ><p id="fb-load-msg" style="color:#374151;font-size:.95rem;margin-top:10px;">${msg}</p>`;
     document.body.appendChild(el);
   } else {
     document.getElementById('fb-load-msg').textContent = msg;
@@ -1257,15 +1257,15 @@ function renderYearView() {
            <div class="year-summary-cards" style="margin-top: 20px;">
         <div class="year-summary-card income">
           <div class="label">${t('finance_income')}</div>
-          <div class="value">${formatVal(annualIncome)}</div>
+          <div class="value" style="font-size: 1.1rem;  line-height: 1;">${formatVal(annualIncome)}</div>
         </div>
         <div class="year-summary-card expense">
           <div class="label">${t('finance_expenses')}</div>
-          <div class="value">${formatVal(annualExpense)}</div>
+          <div class="value" style="font-size: 1.1rem;  line-height: 1;">${formatVal(annualExpense)}</div>
         </div>
         <div class="year-summary-card balance">
           <div class="label">${t('finance_balance')}</div>
-          <div class="value">${formatVal(annualIncome - annualExpense)}</div>
+          <div class="value" style="font-size: 1.1rem;  line-height: 1;">${formatVal(annualIncome - annualExpense)}</div>
         </div>
       </div>
       </div>
@@ -1352,7 +1352,7 @@ function buildEventItem(ev, withActions = true, showDate = false, contextDate = 
     const d = new Date(ev.date + 'T12:00:00');
     const formattedDate = d.toLocaleDateString(locale, { day: '2-digit', month: '2-digit' });
     dateHtml = `
-      <div style="display:flex; align-items:center; gap:4px; font-size:0.75rem; color:var(--primary); font-weight:700; background: var(--primary-lt); padding: 2px 8px; border-radius: 12px; flex-shrink: 0;">
+      <div style="display:flex; align-items:center; gap:4px; font-size:0.75rem; color:var(--primary);  background: var(--primary-lt); padding: 2px 8px; border-radius: 12px; flex-shrink: 0;">
         <span class="material-symbols-outlined" style="font-size:14px;">calendar_today</span>
         ${formattedDate}
       </div>`;
@@ -1372,7 +1372,7 @@ function buildEventItem(ev, withActions = true, showDate = false, contextDate = 
       </div>
       ${ev.description ? `<div class="event-description">${escHtml(ev.description)}</div>` : ''}
       ${ev.isIgnored ? `
-        <div style="display:flex; align-items:center; gap:4px; color:var(--danger); font-size:0.65rem; font-weight:700; margin-top:4px;">
+        <div style="display:flex; align-items:center; gap:4px; color:var(--danger); font-size:0.65rem;  margin-top:4px;">
           <span class="material-symbols-outlined" style="font-size:12px;">event_busy</span>
           <span>${t('ignored_instance_badge')}</span>
         </div>` : ''}
@@ -1464,18 +1464,18 @@ function openDayModal(d) {
       </div>
       
       <div style="flex:1; overflow: hidden;">
-        <div style="font-size:0.95rem; font-weight:750; color:var(--text); text-decoration: ${(isChecked || t.isIgnored) ? 'line-through' : 'none'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-          ${truncate(t.desc)} ${t.installments > 0 ? `<span style="font-size:0.75rem; color:var(--text3); font-weight:600; margin-left:4px;">(${t.currentInstallment}/${t.installments})</span>` : ''}
+        <div >
+          ${truncate(t.desc)} ${t.installments > 0 ? `<span style="font-size:0.75rem; color:var(--text3);  margin-left:4px;">(${t.currentInstallment}/${t.installments})</span>` : ''}
         </div>
-        <div style="font-size:0.75rem; color:var(--text3); font-weight:600;">${t.type === 'income' ? 'Receita' : 'Despesa'}</div>
+        <div style="font-size:0.75rem; color:var(--text3); ">${t.type === 'income' ? 'Receita' : 'Despesa'}</div>
       </div>
       
       <div style="text-align:right; flex-shrink: 0;">
-        <div style="font-size:1rem; font-weight:800; color:${color}; text-decoration: ${(isChecked || t.isIgnored) ? 'line-through' : 'none'};">
+        <div style="font-size:1rem; color:${color}; text-decoration: ${(isChecked || t.isIgnored) ? 'line-through' : 'none'};">
           ${t.type === 'income' ? '+' : '-'} ${formatVal(t.amount)}
         </div>
         ${t.isIgnored ? `
-          <div style="display:flex; align-items:center; gap:4px; color:var(--danger); font-size:0.7rem; font-weight:700; margin-top:4px; justify-content: flex-end;">
+          <div style="display:flex; align-items:center; gap:4px; color:var(--danger); font-size:0.7rem; margin-top:4px; justify-content: flex-end;">
             <span class="material-symbols-outlined" style="font-size:14px;">event_busy</span>
             <span data-i18n="ignored_instance_badge">${typeof i18n !== 'undefined' ? i18n.t('ignored_instance_badge') : 'DESCONSIDERADO'}</span>
           </div>
@@ -1833,11 +1833,11 @@ function renderSearch(query) {
   const t = (k) => typeof i18n !== 'undefined' ? i18n.t(k) : k;
   const locale = typeof i18n !== 'undefined' ? i18n.t('locale') : 'pt-BR';
   const q = query.trim().toLowerCase();
-  
+
   const countEl = $('events-count');
   const resultsEl = $('search-results');
   resultsEl.innerHTML = '';
-  
+
   if (!q) {
     if (countEl) countEl.style.display = "none";
     return;
@@ -1877,7 +1877,7 @@ function renderSearch(query) {
 
   S.searchState.results = dedupedFull;
   S.searchState.page = 0;
-  
+
   if (countEl) {
     countEl.innerHTML = `${dedupedFull.length} <span data-i18n="events_count_zero">${t('events_count_zero')}</span>`;
     if (typeof i18n !== 'undefined') i18n.applyToDOM();
@@ -2519,12 +2519,12 @@ function renderFinanceList(list) {
           <span class="material-symbols-outlined" style="font-size:18px;">${t.type === 'income' ? 'trending_up' : 'trending_down'}</span>
         </div>
         <div>
-          <div style="font-size:0.8rem; font-weight:700; color:var(--text); text-decoration: ${isChecked ? 'line-through' : 'none'};">${truncate(t.desc)} ${t.installments > 0 ? `<span style="font-size:0.65rem; color:var(--text3); font-weight:600; margin-left:4px;">(${t.currentInstallment}/${t.installments})</span>` : ''}</div>
+          <div>${truncate(t.desc)} ${t.installments > 0 ? `<span style="font-size:0.65rem; color:var(--text3);  margin-left:4px;">(${t.currentInstallment}/${t.installments})</span>` : ''}</div>
           <div style="font-size:0.65rem; color:var(--text2);">${new Date(t.date + 'T12:00:00').toLocaleDateString()}</div>
         </div>
       </div>
       <div style="display:flex; align-items:center; gap:12px;">
-          <div style="font-size:0.85rem; font-weight:700; color:${t.type === 'income' ? '#16a34a' : '#dc2626'}; text-decoration: ${isChecked ? 'line-through' : 'none'};">
+          <div style="font-size:0.85rem;  color:${t.type === 'income' ? '#16a34a' : '#dc2626'}; text-decoration: ${isChecked ? 'line-through' : 'none'};">
           ${t.type === 'income' ? '+' : '-'} ${formatVal(t.amount)}
         </div>
         <button class="btn btn-ghost btn-icon-sm" onclick="window.deleteTransaction('${t.id}')" style="display:none;">
@@ -2638,7 +2638,7 @@ window.toggleTransactionStatus = async function (id, event, dateStr = null) {
 
   const targetDate = dateStr || t.date;
   const isRecurring = t.recurrence && t.recurrence !== 'none';
-  
+
   // Determinar estado atual (prioridade no override)
   const currentChecked = (t.overrides && t.overrides[targetDate] && t.overrides[targetDate].checked !== undefined)
     ? t.overrides[targetDate].checked

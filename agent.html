@@ -16,9 +16,9 @@
       border-radius: 8px;
       color: var(--primary, #7c3aed);
       cursor: pointer;
-      font-family: 'Inter', sans-serif;
+      font-family: var(--font);
       font-size: 0.72rem;
-      font-weight: 700;
+
       height: 30px;
       letter-spacing: 0.06em;
       min-width: 36px;
@@ -46,6 +46,7 @@
       --text2: #6b7280;
       --border: #e5e7eb;
       --radius: 18px;
+      --font: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
     }
 
     * {
@@ -57,7 +58,7 @@
     }
 
     body {
-      font-family: 'Inter', sans-serif;
+      font-family: var(--font);
       background: var(--bg);
       color: var(--text);
       display: flex;
@@ -256,7 +257,7 @@
       padding: 8px 18px;
       border-radius: 20px;
       font-size: 0.85rem;
-      font-weight: 600;
+      
       cursor: pointer;
       color: var(--primary);
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
@@ -314,7 +315,7 @@
     <div class="agent-info">
       <div class="agent-avatar"><img src="robo.png" style="width:100%; height:100%; object-fit:contain;"></div>
       <div>
-        <h3 style="font-size: 1rem; font-weight: 700;">Agent | AI</h3>
+        <div style="font-size: 1rem;">Agent | AI</div>
         <p id="agent-status" style="font-size: 0.75rem; color: var(--text2);" data-i18n="agent_online">Online e pronto
           para ajudar</p>
       </div>
@@ -546,11 +547,11 @@
       // ── Identify scale/schedule intent (bilingual) ──
       const isScaleQuery = q.includes('folga') || q.includes('trabalha') || q.includes('trabalho') || q.includes('trampa') || q.includes('trampo') || q.includes('servico') || q.includes('escala') || q.includes('descans')
         || q.includes('day off') || q.includes('off day') || q.includes('schedule') || q.includes('shift') || q.includes('work') || q.includes('rest') || q.includes('off tomorrow') || q.includes('working') || q.includes('am i off') || q.includes('do i work');
-      
+
       // Specific triggers for extra content that should override scale intent
-      const isExtraContent = q.includes('piada') || q.includes('joke') || q.includes('filme') || q.includes('movie') || 
-                             q.includes('biblia') || q.includes('bible') || q.includes('versiculo') || q.includes('verse') ||
-                             q.includes('motivacao') || q.includes('motivation') || q.includes('frase');
+      const isExtraContent = q.includes('piada') || q.includes('joke') || q.includes('filme') || q.includes('movie') ||
+        q.includes('biblia') || q.includes('bible') || q.includes('versiculo') || q.includes('verse') ||
+        q.includes('motivacao') || q.includes('motivation') || q.includes('frase');
 
       if (isScaleQuery && !isExtraContent) currentIntent = 'scale';
 

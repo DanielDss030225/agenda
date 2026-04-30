@@ -33,7 +33,7 @@
   --radius: 14px;
   --radius-sm: 8px;
   --radius-lg: 20px;
-  --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --keyboard-h: 0px;
   /* Será atualizada via JS */
@@ -49,6 +49,13 @@ body {
   -webkit-font-smoothing: antialiased;
   font-size: 15px;
   line-height: 1.5;
+}
+
+input,
+button,
+textarea,
+select {
+  font-family: inherit;
 }
 
 .material-symbols-outlined {
@@ -197,7 +204,7 @@ body {
 
 .login-title {
   font-size: 2.2rem;
-  font-weight: 900;
+
   color: var(--text);
   letter-spacing: -1px;
   margin-bottom: 4px;
@@ -206,7 +213,7 @@ body {
 .login-sub {
   font-size: 1rem;
   color: var(--text2);
-  font-weight: 500;
+
   opacity: 0.7;
 }
 
@@ -261,7 +268,7 @@ body {
   color: var(--text3);
   text-align: center;
   margin-top: 16px;
-  font-weight: 500;
+
 }
 
 /* Ajuste nos inputs para mobile premium */
@@ -349,7 +356,7 @@ body {
 }
 
 .recovery-title {
-  font-weight: 800;
+
   font-size: 1.4rem;
   color: var(--text);
   letter-spacing: -0.5px;
@@ -422,7 +429,7 @@ body {
   gap: 8px;
   font-size: 0.78rem;
   color: var(--text2);
-  font-weight: 500;
+
 }
 
 .recovery-tip .material-symbols-outlined {
@@ -448,7 +455,7 @@ body {
   cursor: pointer;
   font-family: var(--font);
   font-size: 0.82rem;
-  font-weight: 600;
+
   color: var(--text3);
   padding: 8px;
   border-radius: 10px;
@@ -529,11 +536,11 @@ body {
   margin-top: 12px;
   font-size: 0.8rem;
   color: var(--text3);
-  font-weight: 500;
+
 }
 
 .recovery-countdown-num {
-  font-weight: 800;
+
   color: var(--primary);
   font-size: 0.88rem;
 }
@@ -550,7 +557,7 @@ body {
 .recovery-resend-text {
   font-size: 0.82rem;
   color: var(--text2);
-  font-weight: 500;
+
 }
 
 .recovery-resend-btn {
@@ -559,7 +566,7 @@ body {
   cursor: pointer;
   font-family: var(--font);
   font-size: 0.82rem;
-  font-weight: 700;
+
   color: var(--primary);
   padding: 4px 8px;
   border-radius: 8px;
@@ -597,7 +604,7 @@ body {
 .forgot-separator-text {
   font-size: 0.72rem;
   color: var(--text3);
-  font-weight: 600;
+
   text-transform: uppercase;
   letter-spacing: 0.06em;
   flex: 0;
@@ -617,7 +624,7 @@ body {
   cursor: pointer;
   font-family: var(--font);
   font-size: 0.82rem;
-  font-weight: 600;
+
   color: var(--text2);
   transition: all 0.2s ease;
 }
@@ -747,7 +754,7 @@ body {
   justify-content: flex-start;
 }
 
-.side-menu h4 {
+.side-menu .menu-brand-name {
   font-size: 1.3rem;
 }
 
@@ -779,11 +786,13 @@ body {
 .scale-bar {
   display: flex;
   align-items: center;
-  justify-content: end;
+  justify-content: flex-start;
+  /* Permite que os itens comecem da esquerda */
   padding: 6px 14px 10px;
   gap: 8px;
   border-top: 1px solid var(--border);
   height: 70px;
+  padding-left: 100px;
 }
 
 .scale-bar.hidden {
@@ -802,7 +811,7 @@ body {
 
 .scale-label {
   font-size: .65rem;
-  font-weight: 700;
+
   color: var(--text3);
   text-transform: uppercase;
   letter-spacing: .06em;
@@ -811,7 +820,7 @@ body {
 .events-count {
   font-size: .75rem;
   color: var(--text3);
-  font-weight: 500;
+
 }
 
 .view-switcher {
@@ -833,7 +842,7 @@ body {
   border-radius: 8px;
   cursor: pointer;
   font-size: .72rem;
-  font-weight: 600;
+
   font-family: var(--font);
   background: transparent;
   color: var(--text3);
@@ -927,13 +936,25 @@ body {
 }
 
 .cal-title {
-  font-size: 1.2rem;
-  font-weight: 800;
+  font-size: 1.35rem;
+
   color: var(--text);
   cursor: pointer;
-  transition: color .2s;
+  transition: all 0.2s ease;
   text-transform: capitalize;
-  letter-spacing: -.3px;
+  letter-spacing: -0.03em;
+  padding: 6px 16px;
+  border-radius: 12px;
+  user-select: none;
+  display: inline-block;
+  /* Retornado para inline-block já que não há mais ícone */
+}
+
+
+
+.cal-title:active {
+  background: var(--primary-lt);
+  transform: scale(0.97);
 }
 
 .cal-title:hover {
@@ -960,7 +981,7 @@ body {
   text-align: center;
   padding: 7px 0;
   font-size: .68rem;
-  font-weight: 700;
+
   color: var(--text3);
   text-transform: uppercase;
   letter-spacing: .04em;
@@ -1063,11 +1084,12 @@ body {
 .day-cell.today {
   background: var(--primary-lt);
   border: 2px solid var(--primary);
+
 }
 
 .day-cell.today .day-num {
   color: var(--primary);
-  font-weight: 800;
+
 }
 
 .day-cell.selected {
@@ -1090,8 +1112,8 @@ body {
 }
 
 .day-num {
-  font-size: .8rem;
-  font-weight: 600;
+  font-size: 1.1rem;
+
   color: var(--text);
   line-height: 1;
   margin-bottom: 3px;
@@ -1102,7 +1124,7 @@ body {
 
 .day-holiday-badge {
   font-size: .5rem;
-  font-weight: 700;
+
   background: #f97316;
   color: white;
   border-radius: 4px;
@@ -1114,7 +1136,7 @@ body {
   font-size: .55rem;
   color: white;
   background: #f97316;
-  font-weight: 700;
+
   padding: 1px 4px;
   border-radius: 4px;
   white-space: nowrap;
@@ -1126,7 +1148,7 @@ body {
 
 .day-event-pill {
   font-size: .58rem;
-  font-weight: 600;
+
   color: white;
   padding: 2px 5px;
   border-radius: 4px;
@@ -1140,7 +1162,7 @@ body {
 .day-more {
   font-size: .58rem;
   color: var(--text3);
-  font-weight: 600;
+
 }
 
 .day-work-dot {
@@ -1165,7 +1187,7 @@ body {
   bottom: -1px;
   right: 12px;
   font-size: 0.45rem;
-  font-weight: 800;
+
   text-transform: uppercase;
   letter-spacing: 0.02em;
   opacity: 0.8;
@@ -1214,7 +1236,7 @@ body {
 
 .mini-month-title {
   font-size: .78rem;
-  font-weight: 700;
+
   color: var(--text);
   text-align: center;
   margin-bottom: 6px;
@@ -1232,7 +1254,7 @@ body {
   font-size: .5rem;
   text-align: center;
   color: var(--text3);
-  font-weight: 700;
+
   padding: 2px 0;
 }
 
@@ -1250,7 +1272,7 @@ body {
   border-color: var(--primary);
   border-width: 2px;
   background: var(--primary-light);
-  font-weight: 800;
+
   color: var(--primary);
 }
 
@@ -1370,7 +1392,7 @@ body {
 
 .modal-title {
   font-size: 1.05rem;
-  font-weight: 700;
+
   color: var(--text);
 }
 
@@ -1414,7 +1436,7 @@ body {
 
 .field-label {
   font-size: .78rem;
-  font-weight: 600;
+
   color: var(--text2);
 }
 
@@ -1487,7 +1509,7 @@ body {
   border-radius: var(--radius-sm);
   background: var(--surface2);
   font-size: .72rem;
-  font-weight: 600;
+
   font-family: var(--font);
   color: var(--text2);
   cursor: pointer;
@@ -1511,7 +1533,7 @@ body {
   border: none;
   border-radius: var(--radius-sm);
   font-family: var(--font);
-  font-weight: 600;
+
   font-size: .85rem;
   cursor: pointer;
   transition: all .15s;
@@ -1674,22 +1696,13 @@ body {
   gap: 4px;
 }
 
-.event-title {
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  letter-spacing: -0.01em;
-}
 
 .event-meta {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 0.75rem;
-  font-weight: 600;
+
   color: var(--text2);
   flex-wrap: wrap;
 }
@@ -1772,12 +1785,12 @@ body {
 .work-status-label {
   font-size: .75rem;
   color: var(--text3);
-  font-weight: 500;
+
 }
 
 .work-status-value {
   font-size: .95rem;
-  font-weight: 700;
+
 }
 
 .work-status-card.work .work-status-value {
@@ -1790,7 +1803,7 @@ body {
 
 .work-badge {
   font-size: .7rem;
-  font-weight: 700;
+
   padding: 3px 10px;
   border-radius: 20px;
   display: inline-flex;
@@ -1821,7 +1834,7 @@ body {
 
 .scale-month-name {
   font-size: .8rem;
-  font-weight: 800;
+
   color: var(--text2);
   text-transform: uppercase;
   letter-spacing: .06em;
@@ -1841,7 +1854,7 @@ body {
   font-size: .65rem;
   text-align: center;
   color: var(--text3);
-  font-weight: 700;
+
 }
 
 .scale-day {
@@ -1851,7 +1864,7 @@ body {
   justify-content: center;
   border-radius: 6px;
   font-size: .78rem;
-  font-weight: 700;
+
   cursor: pointer;
   transition: all .15s;
   background: var(--surface2);
@@ -1959,7 +1972,7 @@ body {
 
 .logout-title {
   font-size: 1.15rem;
-  font-weight: 800;
+
   color: var(--text);
   margin-bottom: 8px;
 }
@@ -2085,7 +2098,7 @@ body {
 }
 
 #month-title {
-  min-width: 250px;
+  min-width: 210px;
   text-align: center;
   cursor: pointer;
 }
@@ -2136,6 +2149,7 @@ body {
 /* ===== WEB APP LAYOUT (DESKTOP FIRST) ===== */
 @media (min-width: 900px) {
 
+
   html,
   body {
     background: #e5e7eb;
@@ -2184,8 +2198,7 @@ body {
 
   .side-menu.collapsed .menu-brand-name,
   .side-menu.collapsed .btn span:not(.material-symbols-outlined),
-  .side-menu.collapsed .side-menu-content p,
-  .side-menu.collapsed .header-actions h6 {
+  .side-menu.collapsed .side-menu-content p {
     display: none !important;
   }
 
@@ -2351,6 +2364,7 @@ body {
   /* Otimizações de Grid e Células para Desktop (Restauradas) */
   .day-cell {
     min-height: 100px;
+
   }
 
   .month-slide {
@@ -2392,7 +2406,7 @@ body {
 
   .side-menu .btn-full {
     padding: 10px 20px;
-    font-size: 1.1rem;
+    font-size: 1.3rem !important;
     border-radius: 18px;
     justify-content: flex-start;
   }
@@ -2427,9 +2441,10 @@ body {
   }
 
   #month-title {
-    min-width: 200px;
+    /* Removido min-width fixo para permitir flexibilidade no mobile */
     text-align: center;
     cursor: pointer;
+    font-size: 1.25rem;
   }
 
   #scale-display {
@@ -2443,8 +2458,15 @@ body {
   }
 
   .scale-bar {
-
     height: auto;
+    padding: 8px 12px;
+  }
+
+  /* Posiciona o botão de menu na extremidade esquerda */
+  #btn-open-menu.mobile-only {
+    margin-right: auto !important;
+    margin-left: -4px;
+    /* Ajuste para encostar mais na borda */
   }
 
 }
@@ -2453,7 +2475,7 @@ body {
 .form-error {
   color: #ef4444 !important;
   font-size: .85rem;
-  font-weight: 600;
+
   margin-top: 6px;
   display: block !important;
 }
@@ -2564,7 +2586,7 @@ textarea {
 
 .year-summary-card .label {
   font-size: 0.6rem;
-  font-weight: 700;
+
   text-transform: uppercase;
   color: var(--text3);
   margin-bottom: 4px;
@@ -2572,7 +2594,7 @@ textarea {
 
 .year-summary-card .value {
   font-size: 0.85rem;
-  font-weight: 800;
+
   color: var(--text);
 }
 
@@ -2620,7 +2642,7 @@ textarea {
 
 .year-chart-title {
   font-size: 0.85rem;
-  font-weight: 700;
+
   color: var(--text);
 }
 
@@ -2634,7 +2656,7 @@ textarea {
   align-items: center;
   gap: 4px;
   font-size: 0.65rem;
-  font-weight: 600;
+
   color: var(--text3);
 }
 
@@ -2691,7 +2713,7 @@ textarea {
 
 .chart-label {
   font-size: 0.55rem;
-  font-weight: 700;
+
   color: var(--text3);
   text-transform: uppercase;
 }
@@ -2707,7 +2729,7 @@ textarea {
 
 .mini-fin-item {
   font-size: 0.55rem;
-  font-weight: 800;
+
   display: flex;
   align-items: center;
   gap: 2px;
@@ -2731,6 +2753,8 @@ textarea {
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
+  margin-left: auto;
+  /* Garante que os atalhos fiquem na extremidade direita */
 }
 
 #btn-shortcut-sound,
@@ -2873,7 +2897,7 @@ textarea {
 }
 
 .toast-title {
-  font-weight: 800;
+
   font-size: 1rem;
   color: var(--text);
   margin-bottom: 4px;
@@ -2920,7 +2944,7 @@ textarea {
 
 .toast-checkbox-label {
   font-size: 0.8rem;
-  font-weight: 600;
+
   color: var(--text2);
   line-height: 1;
 }
@@ -2934,7 +2958,7 @@ textarea {
   padding: 7px 14px;
   border-radius: 10px;
   font-size: 0.78rem;
-  font-weight: 700;
+
   border: none;
   cursor: pointer;
   transition: all 0.2s;
@@ -2956,4 +2980,12 @@ textarea {
 
 .toast-btn:active {
   transform: scale(0.95);
+}
+
+button span {
+  font-size: 18px;
+}
+
+button {
+  font-size: 18px !important;
 }
