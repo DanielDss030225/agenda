@@ -118,7 +118,7 @@
     .lp-title {
       font-family: var(--font);
       font-size: 1.35rem;
-      
+
       color: #111827;
       margin: 0 0 4px;
       letter-spacing: -0.02em;
@@ -129,7 +129,7 @@
       font-size: 0.85rem;
       color: #6b7280;
       margin: 0 0 28px;
-      
+
     }
 
     .lp-flags {
@@ -194,7 +194,7 @@
     .lp-flag-label small {
       display: block;
       font-size: 0.72rem;
-      
+
       color: #9ca3af;
       margin-top: 2px;
     }
@@ -584,7 +584,8 @@
               <div class="recovery-success-ripple"></div>
             </div>
 
-            <div class="recovery-title" style="margin-top: 20px;" data-i18n="recovery_success_title">E-mail enviado!</div>
+            <div class="recovery-title" style="margin-top: 20px;" data-i18n="recovery_success_title">E-mail enviado!
+            </div>
             <p class="recovery-subtitle" id="recovery-sent-to"></p>
             <p class="recovery-subtitle" style="margin-top:6px;" data-i18n="recovery_success_desc">
               Clique no link dentro do e-mail para redefinir sua senha.
@@ -745,8 +746,7 @@
               <span class="material-symbols-outlined" style="color: #fff; font-size: 32px;">smart_toy</span>
             </div>
             <div>
-              <div data-i18n="agent_intro_title"
-                style="margin: 0; font-size: 0.9rem;  color: var(--text);"></div>
+              <div data-i18n="agent_intro_title" style="margin: 0; font-size: 0.9rem;  color: var(--text);"></div>
               <p data-i18n="agent_intro_desc"
                 style="margin: 4px 0 0; font-size: 0.75rem; color: var(--text2); line-height: 1.4;"></p>
             </div>
@@ -897,8 +897,8 @@
               style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 10px 14px; padding-right: 28px; background: var(--surface); border-bottom: 1px solid var(--border);">
               <div
                 style="background: #eef2ff; padding: 8px; border-radius: 12px; text-align: center; border: 1px solid #c7d2fe;">
-                <div style="font-size: 0.9rem; color: #4338ca; text-transform: uppercase; "
-                  data-i18n="finance_income">Receitas</div>
+                <div style="font-size: 0.9rem; color: #4338ca; text-transform: uppercase; " data-i18n="finance_income">
+                  Receitas</div>
                 <div id="glb-total-income" style="font-size: 1.1rem;  color: #1e1b4b; line-height: 1;">
                   R$ 0,00</div>
               </div>
@@ -906,15 +906,13 @@
                 style="background: #fff1f2; padding: 8px; border-radius: 12px; text-align: center; border: 1px solid #fecdd3;">
                 <div style="font-size: 0.9rem; color: #be123c; text-transform: uppercase; "
                   data-i18n="finance_expenses">Despesas</div>
-                <div id="glb-total-expenses"
-                  style="font-size: 1.1rem;  color: #4c0519; line-height: 1;">R$ 0,00</div>
+                <div id="glb-total-expenses" style="font-size: 1.1rem;  color: #4c0519; line-height: 1;">R$ 0,00</div>
               </div>
               <div
                 style="background: #f0fdf4; padding: 8px; border-radius: 12px; text-align: center; border: 1px solid #bbf7d0;">
-                <div style="font-size: 0.9rem; color: #15803d; text-transform: uppercase; "
-                  data-i18n="finance_balance">Saldo</div>
-                <div id="glb-total-balance"
-                  style="font-size: 1.1rem;  color: #052e16; line-height: 1;">R$ 0,00</div>
+                <div style="font-size: 0.9rem; color: #15803d; text-transform: uppercase; " data-i18n="finance_balance">
+                  Saldo</div>
+                <div id="glb-total-balance" style="font-size: 1.1rem;  color: #052e16; line-height: 1;">R$ 0,00</div>
               </div>
             </div>
           </div>
@@ -1095,7 +1093,8 @@
           <p id="scale-error" class="form-error" style="text-align: center; margin-top: 8px; "></p>
           <div class="modal-footer">
             <button id="btn-clear-seq" class="btn btn-ghost btn-sm" data-i18n="btn_clear">Limpar</button>
-            <button type="button" class="btn btn-ghost btn-sm" onclick="closeModal('modal-scale')">Configurar
+            <button type="button" class="btn btn-ghost btn-sm" onclick="closeModal('modal-scale')"
+              data-i18n="scale_configure_later">Configurar
               depois</button>
             <button id="btn-save-scale" class="btn btn-primary flex-1" disabled data-i18n="btn_save_scale">Salvar
               Escala</button>
@@ -1136,13 +1135,11 @@
           </button>
         </div>
 
-        <div
-          style="font-size: 0.75rem;   text-transform: uppercase; margin: 16px 0 8px; letter-spacing: 0.5px;"
+        <div style="font-size: 0.75rem;   text-transform: uppercase; margin: 16px 0 8px; letter-spacing: 0.5px;"
           data-i18n="cat_evento">Eventos</div>
         <div id="day-events-list" class="events-list"></div>
 
-        <div
-          style="font-size: 0.75rem;  text-transform: uppercase; margin: 16px 0 8px; letter-spacing: 0.5px;"
+        <div style="font-size: 0.75rem;  text-transform: uppercase; margin: 16px 0 8px; letter-spacing: 0.5px;"
           data-i18n="finance_title">Finanças</div>
         <div id="day-finance-list" class="events-list"></div>
 
@@ -1399,7 +1396,8 @@
       <div class="modal-body">
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-          <div style="font-size: 0.9rem;  color: var(--text);" id="finance-month-label">Resumo do Mês
+          <div style="font-size: 0.9rem;  color: var(--text);" id="finance-month-label" data-i18n="finance_month">Resumo
+            do Mês
           </div>
           <button id="btn-add-transaction" class="btn btn-primary btn-sm">
             <span class="material-symbols-outlined" style="font-size: 18px;">add</span>
@@ -1410,22 +1408,22 @@
           style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px;">
           <div
             style="background: #eef2ff; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #c7d2fe;">
-            <div style="font-size: 0.65rem; color: #4338ca; text-transform: uppercase; "
-              data-i18n="finance_income">Receitas</div>
+            <div style="font-size: 0.65rem; color: #4338ca; text-transform: uppercase; " data-i18n="finance_income">
+              Receitas</div>
             <div id="fin-total-income" style="font-size: 1.1rem;  color: #1e1b4b; line-height: 1;">R$
               0,00</div>
           </div>
           <div
             style="background: #fff1f2; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #fecdd3;">
-            <div style="font-size: 0.65rem; color: #be123c; text-transform: uppercase; "
-              data-i18n="finance_expenses">Despesas</div>
+            <div style="font-size: 0.65rem; color: #be123c; text-transform: uppercase; " data-i18n="finance_expenses">
+              Despesas</div>
             <div id="fin-total-expenses" style="font-size: 1.1rem;  color: #4c0519; line-height: 1;">R$
               0,00</div>
           </div>
           <div
             style="background: #f0fdf4; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #bbf7d0;">
-            <div style="font-size: 0.65rem; color: #15803d; text-transform: uppercase; "
-              data-i18n="finance_balance">Saldo</div>
+            <div style="font-size: 0.65rem; color: #15803d; text-transform: uppercase; " data-i18n="finance_balance">
+              Saldo</div>
             <div id="fin-total-balance" style="font-size: 1.1rem;  color: #052e16; line-height: 1;">R$
               0,00</div>
           </div>

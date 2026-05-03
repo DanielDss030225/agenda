@@ -208,6 +208,15 @@ const TRANSLATIONS = {
     loading_saving: 'Salvando...',
     loading_deleting: 'Excluindo...',
     loading_wait: '',
+    launched_on: 'Lançado em',
+    btn_load_more: 'Carregar Mais',
+    default_transaction: 'Transação',
+    err_process_transaction: 'Erro ao processar transação.',
+    err_save_transaction: 'Erro ao salvar transação. Verifique sua conexão.',
+    err_apply_override: 'Erro ao aplicar edição específica.',
+    custom_scale: 'Escala Custom',
+    scale_configure_later: 'Configurar depois',
+    finance_month: 'Resumo do Mês',
 
     // ---- Holidays ----
     holidays: {
@@ -508,6 +517,15 @@ const TRANSLATIONS = {
     loading_saving: 'Saving...',
     loading_deleting: 'Deleting...',
     loading_wait: '',
+    launched_on: 'Created on',
+    btn_load_more: 'Load More',
+    default_transaction: 'Transaction',
+    err_process_transaction: 'Error processing transaction.',
+    err_save_transaction: 'Error saving transaction. Check your connection.',
+    err_apply_override: 'Error applying specific edit.',
+    custom_scale: 'Custom Schedule',
+    scale_configure_later: 'Set up later',
+    finance_month: 'Month Summary',
 
     // ---- Holidays ----
     holidays: {

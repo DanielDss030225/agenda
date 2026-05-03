@@ -693,16 +693,16 @@
 
         let title = words.join(' ').trim();
         // Se após a limpeza sobrar muito pouco, usamos um título padrão
-        if (!title || title.length < 2) title = 'Compromisso';
+        if (!title || title.length < 2) title = (typeof i18n !== 'undefined' && i18n.lang() === 'en') ? 'Appointment' : 'Compromisso';
         else title = title.charAt(0).toUpperCase() + title.slice(1);
 
         const payload = {
           title: title,
           date: toDateStr(targetDate),
+          description: evObs || (typeof i18n !== 'undefined' && i18n.lang() === 'en' ? 'Scheduled by Agent Bizu' : 'Agendado pelo Agente Bizu'),
           category: 'evento'
         };
         if (evTime) payload.time = evTime;
-        if (evObs) payload.description = evObs;
 
         const newId = Date.now() + '-' + Math.random().toString(36).slice(2, 9);
         payload.id = newId;

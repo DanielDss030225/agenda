@@ -130,7 +130,7 @@ function showLoading(msgKey = 'loading_wait') {
     el = document.createElement('div');
     el.id = 'firebase-loading';
     el.style.cssText = `position:fixed;inset:0;background:#ffffff;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;gap:14px;font-family:var(--font);`;
-    el.innerHTML = `<img class="imgGif" src="aberturaGif.gif" ><p id="fb-load-msg" style="color:#374151;font-size:.95rem;margin-top:10px;">${msg}</p>`;
+    el.innerHTML = `<img class="imgGif" src="aberturaGif.gif" ><p id="fb-load-msg" style="color:#374151;font-size:.95rem; margin-top:10px;">${msg}</p>`;
     document.body.appendChild(el);
   } else {
     document.getElementById('fb-load-msg').textContent = msg;
@@ -950,6 +950,10 @@ function openModal(id) {
   // Garantir que nenhum outro modal esteja aberto antes de abrir o novo
   window.closeAnyModal();
 
+  // Limpar os toasts (removendo visíveis) para não conflitar com modals de inicialização
+  const toastContainer = document.getElementById('toast-container');
+  if (toastContainer) toastContainer.innerHTML = '';
+
   const el = $(id);
   if (el) {
     el.classList.remove('hidden');
@@ -1367,8 +1371,9 @@ function buildEventItem(ev, withActions = true, showDate = false, contextDate = 
       </div>
       <div class="event-meta">
         ${ev.time ? `<span class="material-symbols-outlined" style="font-size:16px;">schedule</span> <span>${ev.time}</span>` : ''}
-        ${ev.category ? `<span style="opacity:0.8;">• ${ev.category}</span>` : ''}
+        ${ev.category ? `<span style="opacity:0.8;">• ${(typeof i18n !== 'undefined' ? i18n.t('cat_' + ev.category.toLowerCase().replace('é', 'e')) : ev.category) || ev.category}</span>` : ''}
         ${ev.recurrence && ev.recurrence !== 'none' ? '<span class="material-symbols-outlined" style="font-size:16px;">sync</span>' : ''}
+        ${ev.createdAt ? `<span style="opacity:0.8; margin-left: 4px;">• ${typeof i18n !== 'undefined' ? i18n.t('launched_on') : 'Lançado em'} ${new Date(ev.createdAt).toLocaleDateString(locale)}</span>` : ''}
       </div>
       ${ev.description ? `<div class="event-description">${escHtml(ev.description)}</div>` : ''}
       ${ev.isIgnored ? `
@@ -1415,7 +1420,7 @@ function openDayModal(d) {
     statusEl.innerHTML = `
       <div class="work-badge-large ${ws.isOff ? 'off' : 'work'}">
         <span class="material-symbols-outlined">${ws.isOff ? 'home' : 'work'}</span>
-        ${ws.isOff ? 'Folga' : 'Trabalho'}
+        ${ws.isOff ? (typeof i18n !== 'undefined' ? i18n.t('tutorial_off_dot') : 'Folga') : (typeof i18n !== 'undefined' ? i18n.t('tutorial_work_dot') : 'Trabalho')}
       </div>
     `;
   }
@@ -1467,7 +1472,7 @@ function openDayModal(d) {
         <div >
           ${truncate(t.desc)} ${t.installments > 0 ? `<span style="font-size:0.75rem; color:var(--text3);  margin-left:4px;">(${t.currentInstallment}/${t.installments})</span>` : ''}
         </div>
-        <div style="font-size:0.75rem; color:var(--text3); ">${t.type === 'income' ? 'Receita' : 'Despesa'}</div>
+        <div style="font-size:0.75rem; color:var(--text3); ">${t.type === 'income' ? (typeof i18n !== 'undefined' ? i18n.t('finance_type_income') : 'Receita') : (typeof i18n !== 'undefined' ? i18n.t('finance_type_expense') : 'Despesa')}${t.createdAt ? ` • ${typeof i18n !== 'undefined' ? i18n.t('launched_on') : 'Lançado em'} ${new Date(t.createdAt).toLocaleDateString(typeof i18n !== 'undefined' ? i18n.t('locale') : 'pt-BR')}` : ''}</div>
       </div>
       
       <div style="text-align:right; flex-shrink: 0;">
@@ -1621,7 +1626,7 @@ async function saveEventForm(e) {
       finishSave();
     } catch (err) {
       console.error("Erro ao salvar sobreposição:", err);
-      alert("Erro ao aplicar edição específica.");
+      alert(typeof i18n !== 'undefined' ? i18n.t('err_apply_override') : "Erro ao aplicar edição específica.");
       hideLoading();
       isSavingEvent = false;
     }
@@ -1797,7 +1802,7 @@ async function saveScale() {
   const ref = new Date(now.getFullYear(), now.getMonth(), 1);
   ref.setHours(0, 0, 0, 0);
 
-  const display = seq.length <= 7 ? (seq.filter(v => v === 1).length + 'x' + seq.filter(v => v === 0).length) : 'Escala Custom';
+  const display = seq.length <= 7 ? (seq.filter(v => v === 1).length + 'x' + seq.filter(v => v === 0).length) : (typeof i18n !== 'undefined' ? i18n.t('custom_scale') : 'Escala Custom');
   S.userScale = { sequence: seq, referenceDate: ref.getTime(), display };
   S.forceScale = false;
 
@@ -1907,7 +1912,7 @@ function renderSearchPage() {
     loadMoreBtn.style.marginBottom = '24px';
     loadMoreBtn.innerHTML = `
       <span class="material-symbols-outlined" style="font-size:18px;">expand_more</span>
-      <span>Carregar Mais</span>
+      <span>${typeof i18n !== 'undefined' ? i18n.t('btn_load_more') : 'Carregar Mais'}</span>
     `;
     loadMoreBtn.onclick = () => {
       S.searchState.page++;
@@ -2244,7 +2249,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const transId = S.editingTransactionId || Date.now().toString();
       const transAmount = parseFloat($('trans-amount').value) || 0;
       const transDateValue = $('trans-date').value;
-      const transDescValue = $('trans-desc').value || 'Transação';
+      const transDescValue = $('trans-desc').value || (typeof i18n !== 'undefined' ? i18n.t('default_transaction') : 'Transação');
+
+      const original = S.editingTransactionId ? S.transactions.find(t => t.id === S.editingTransactionId) : null;
 
       const saveDataLocal = {
         id: transId,
@@ -2253,10 +2260,9 @@ document.addEventListener('DOMContentLoaded', () => {
         amount: transAmount,
         date: transDateValue,
         recurrence: $('trans-recurrence')?.value || 'none',
-        installments: parseInt($('trans-installments')?.value) || 0
+        installments: parseInt($('trans-installments')?.value) || 0,
+        createdAt: original && original.createdAt ? original.createdAt : new Date().toISOString()
       };
-
-      const original = S.editingTransactionId ? S.transactions.find(t => t.id === S.editingTransactionId) : null;
       const isRecurring = original && original.recurrence && original.recurrence !== 'none';
       let shouldAsk = isRecurring;
       let hideOnlyThis = false;
@@ -2314,7 +2320,7 @@ document.addEventListener('DOMContentLoaded', () => {
           finishTransSave();
         } catch (err) {
           console.error("Erro ao salvar sobreposição de transação:", err);
-          alert("Erro ao processar transação.");
+          alert(typeof i18n !== 'undefined' ? i18n.t('err_process_transaction') : "Erro ao processar transação.");
           hideLoading();
         }
       };
@@ -2330,7 +2336,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch (err) {
         hideLoading();
         console.error("Error saving transaction:", err);
-        alert("Erro ao salvar transação. Verifique sua conexão.");
+        alert(typeof i18n !== 'undefined' ? i18n.t('err_save_transaction') : "Erro ao salvar transação. Verifique sua conexão.");
         isSavingTrans = false;
       }
     };
@@ -2520,7 +2526,7 @@ function renderFinanceList(list) {
         </div>
         <div>
           <div>${truncate(t.desc)} ${t.installments > 0 ? `<span style="font-size:0.65rem; color:var(--text3);  margin-left:4px;">(${t.currentInstallment}/${t.installments})</span>` : ''}</div>
-          <div style="font-size:0.65rem; color:var(--text2);">${new Date(t.date + 'T12:00:00').toLocaleDateString()}</div>
+          <div style="font-size:0.65rem; color:var(--text2);">${new Date(t.date + 'T12:00:00').toLocaleDateString(typeof i18n !== 'undefined' ? i18n.t('locale') : 'pt-BR')}${t.createdAt ? ` • ${typeof i18n !== 'undefined' ? i18n.t('launched_on') : 'Lançado em'} ${new Date(t.createdAt).toLocaleDateString(typeof i18n !== 'undefined' ? i18n.t('locale') : 'pt-BR')}` : ''}</div>
         </div>
       </div>
       <div style="display:flex; align-items:center; gap:12px;">
@@ -2822,6 +2828,11 @@ function createToast(options = {}) {
 }
 
 function showPromotionalToasts() {
+  // Evitar sobreposição: não exibir toasts promocionais se algum modal estiver aberto
+  if (document.querySelector('.modal-overlay:not(.hidden)')) return;
+  const lp = document.getElementById('lang-picker-overlay');
+  if (lp && lp.style.display !== 'none' && !lp.classList.contains('hide')) return;
+
   const t = (k) => typeof i18n !== 'undefined' ? i18n.t(k) : k;
 
   // 1. Toast da IA
