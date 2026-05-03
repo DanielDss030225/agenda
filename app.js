@@ -613,8 +613,10 @@ function initApp() {
 
     // Setup Custom Input Masks (No Popups)
     applyMask('evt-date', 'date');
+    applyMask('evt-end-date', 'date');
     applyMask('trans-date', 'date');
     applyMask('evt-time', 'time');
+    applyMask('evt-end-time', 'time');
 
     // Inicializa estado do sidebar no Desktop
     if (localStorage.getItem('agbizu_sidebar_collapsed') === 'true' && window.innerWidth >= 900) {
@@ -843,18 +845,29 @@ function getEventsForDate(d) {
 
   S.events.forEach(e => {
     const start = normalizeDate(e.date);
-    if (targetDate < start) return;
+    const end = e.endDate ? normalizeDate(e.endDate) : start;
 
-    if (e.date === targetStr) {
-      let finalItem = { ...e, isIgnored: !!(e.excludedDates && e.excludedDates[targetStr]), occurrenceDate: targetStr };
-      if (e.overrides && e.overrides[targetStr]) {
-        finalItem = { ...finalItem, ...e.overrides[targetStr] };
+    // Check if within range for non-recurring events OR 'periodo' span
+    if (!e.recurrence || e.recurrence === 'none' || e.recurrence === 'periodo') {
+      if (targetDate >= start && targetDate <= end) {
+        let finalItem = {
+          ...e,
+          isIgnored: !!(e.excludedDates && e.excludedDates[targetStr]),
+          occurrenceDate: targetStr
+        };
+        if (e.overrides && e.overrides[targetStr]) {
+          finalItem = { ...finalItem, ...e.overrides[targetStr] };
+        }
+        result.push(finalItem);
       }
-      result.push(finalItem);
       return;
     }
 
-    if (!e.recurrence || e.recurrence === 'none') return;
+    // Recurring Logic
+    if (targetDate < start) return;
+    // In recurring events, endDate acts as the series end if it exists. 
+    // If the occurrence is on targetDate, we verify if targetDate <= end.
+    if (e.endDate && targetDate > end) return;
 
     let isOccurrence = false;
     if (e.recurrence === 'daily') isOccurrence = true;
@@ -1425,7 +1438,10 @@ function buildEventItem(ev, withActions = true, showDate = false, contextDate = 
         ${dateHtml}
       </div>
       <div class="event-meta">
-        ${ev.time ? `<span class="material-symbols-outlined" style="font-size:16px;">schedule</span> <span>${ev.time}</span>` : ''}
+        ${ev.time ? `
+          <span class="material-symbols-outlined" style="font-size:16px;">schedule</span>
+          <span>${ev.time}${ev.endTime ? ' - ' + ev.endTime : ''}</span>
+        ` : ''}
         ${ev.category ? `<span style="opacity:0.8;">• ${(typeof i18n !== 'undefined' ? i18n.t('cat_' + ev.category.toLowerCase().replace('é', 'e')) : ev.category) || ev.category}</span>` : ''}
         ${ev.recurrence && ev.recurrence !== 'none' ? '<span class="material-symbols-outlined" style="font-size:16px;">sync</span>' : ''}
         ${ev.createdAt ? `<span style="opacity:0.8; margin-left: 4px;">• ${typeof i18n !== 'undefined' ? i18n.t('launched_on') : 'Lançado em'} ${new Date(ev.createdAt).toLocaleDateString(locale)}</span>` : ''}
@@ -1576,13 +1592,17 @@ function openEventForm(evt, clickedDate = null) {
   $('event-modal-title').textContent = evt ? t('edit_event') : t('new_event');
   $('evt-title').value = evt?.title || '';
   $('evt-desc').value = evt?.description || '';
-  setFPValue('evt-time', evt?.time || '');
-
   const displayDate = clickedDate || (evt?.date ? new Date(evt.date + 'T12:00:00') : (S.selectedDate || new Date()));
   setFPValue('evt-date', toDateStr(displayDate));
+  setFPValue('evt-time', evt?.time || '');
+  setFPValue('evt-end-date', evt?.endDate || toDateStr(displayDate));
+  setFPValue('evt-end-time', evt?.endTime || '');
   $('evt-recurrence').value = evt?.recurrence || 'none';
 
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === (evt?.category || 'evento')));
+
+  const endRow = $('evt-end-row');
+  if (endRow) endRow.classList.toggle('hidden', $('evt-recurrence').value !== 'periodo');
 
   if (evt) show('btn-delete-event'); else hide('btn-delete-event');
   updateWorkBadge($('evt-date').value);
@@ -1592,7 +1612,7 @@ function openEventForm(evt, clickedDate = null) {
 
   if (evt && recArea && btnIgnore) {
     recArea.classList.remove('hidden');
-    const isIgnored = evt.excludedDates && evt.excludedDates[$('evt-date').value];
+    const isIgnored = evt.excludedDates && evt.excludedDates[S.editingOccurrenceDate];
     const recType = (evt.recurrence && evt.recurrence !== 'none') ? evt.recurrence : 'daily';
     const i18nKey = (isIgnored ? 'consider_instance_' : 'ignore_instance_') + recType;
 
@@ -1647,11 +1667,35 @@ async function saveEventForm(e) {
   if (!date) return;
 
   isSavingEvent = true;
-  const data = { title, date, description: $('evt-desc').value.trim(), time: $('evt-time').value, category: document.querySelector('.cat-btn.active')?.dataset.cat || 'evento', recurrence: $('evt-recurrence').value };
+  const recValue = $('evt-recurrence').value;
+  const data = {
+    title,
+    date,
+    endDate: (recValue === 'periodo') ? (parseDate($('evt-end-date').value) || date) : (recValue === 'none' ? date : null),
+    description: $('evt-desc').value.trim(),
+    time: $('evt-time').value,
+    endTime: $('evt-end-time').value,
+    category: document.querySelector('.cat-btn.active')?.dataset.cat || 'evento',
+    recurrence: recValue
+  };
 
   const original = S.editingEventId ? S.events.find(e => e.id === S.editingEventId) : null;
   const isRecurring = original && original.recurrence && original.recurrence !== 'none';
-  const shouldAsk = isRecurring;
+  let shouldAsk = isRecurring;
+  let hideOnlyThis = false;
+
+  if (original) {
+    const recurrenceChanged = (data.recurrence !== original.recurrence || data.endDate !== (original.endDate || null));
+    const mainPropsSame = (data.title === original.title && data.description === original.description && data.time === original.time && data.category === original.category && data.date === original.date);
+
+    if (recurrenceChanged) {
+      hideOnlyThis = true;
+      if (mainPropsSame) {
+        shouldAsk = false;
+      }
+    }
+  }
+
   const isEditingVirtual = isRecurring && S.editingOccurrenceDate !== original.date;
 
   const performAllSave = async () => {
@@ -1672,8 +1716,10 @@ async function saveEventForm(e) {
           title: data.title,
           description: data.description,
           time: data.time,
+          endTime: data.endTime,
           category: data.category,
-          date: data.date
+          date: data.date,
+          endDate: data.endDate
         };
         if (!original.overrides) original.overrides = {};
         original.overrides[S.editingOccurrenceDate] = overrideData;
@@ -1698,7 +1744,7 @@ async function saveEventForm(e) {
   };
 
   if (shouldAsk) {
-    window.showRecurrenceChoiceModal(performInstanceSave, performAllSave);
+    window.showRecurrenceChoiceModal(performInstanceSave, performAllSave, hideOnlyThis);
     isSavingEvent = false;
     return;
   }
@@ -2145,6 +2191,12 @@ document.addEventListener('DOMContentLoaded', () => {
   if ($('btn-prev-year')) $('btn-prev-year').onclick = () => { S.currentDate.setFullYear(S.currentDate.getFullYear() - 1); renderYearView(); };
   if ($('btn-next-year')) $('btn-next-year').onclick = () => { S.currentDate.setFullYear(S.currentDate.getFullYear() + 1); renderYearView(); };
   if ($('btn-back-to-month')) $('btn-back-to-month').onclick = () => setView('month');
+  if ($('evt-recurrence')) {
+    $('evt-recurrence').onchange = (e) => {
+      const endRow = $('evt-end-row');
+      if (endRow) endRow.classList.toggle('hidden', e.target.value !== 'periodo');
+    };
+  }
   if ($('event-form')) $('event-form').onsubmit = saveEventForm;
   if ($('btn-close-day')) $('btn-close-day').onclick = () => closeModal('modal-day');
   if ($('btn-close-event')) $('btn-close-event').onclick = () => closeModal('modal-event');
@@ -2417,7 +2469,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if ($('btn-ignore-event-instance')) {
     $('btn-ignore-event-instance').onclick = () => {
-      const dateStr = $('evt-date').value;
+      const dateStr = parseDate($('evt-date').value);
       const eventId = S.editingEventId;
       if (eventId && dateStr) window.ignoreEventInstance(eventId, dateStr);
     };
@@ -2425,7 +2477,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if ($('btn-ignore-trans-instance')) {
     $('btn-ignore-trans-instance').onclick = () => {
-      const dateStr = $('trans-date').value;
+      const dateStr = parseDate($('trans-date').value);
       const transId = S.editingTransactionId;
       if (transId && dateStr) window.ignoreTransactionInstance(transId, dateStr);
     };

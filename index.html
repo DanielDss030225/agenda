@@ -1180,14 +1180,35 @@
           </div>
           <div class="field-row">
             <div class="field-group flex-1">
-              <label class="field-label" data-i18n="evt_date_label">Data *</label>
-              <input id="evt-date" class="field-input" type="text" />
+              <label class="field-label" data-i18n="evt_start_date_label">Data Início *</label>
+              <input id="evt-date" class="field-input" type="text" placeholder="dd/mm/aaaa" />
               <p id="err-date" class="form-error hidden" data-i18n="evt_date_error">Data inválida</p>
             </div>
             <div class="field-group flex-1">
-              <label class="field-label" data-i18n="evt_time_label">Horário</label>
-              <input id="evt-time" class="field-input" type="text" />
+              <label class="field-label" data-i18n="evt_start_time_label">Hora Início</label>
+              <input id="evt-time" class="field-input" type="text" placeholder="00:00" />
             </div>
+          </div>
+          <div id="evt-end-row" class="field-row hidden">
+            <div class="field-group flex-1">
+              <label class="field-label" data-i18n="evt_end_date_label">Data Fim</label>
+              <input id="evt-end-date" class="field-input" type="text" placeholder="dd/mm/aaaa" />
+            </div>
+            <div class="field-group flex-1">
+              <label class="field-label" data-i18n="evt_end_time_label">Hora Fim</label>
+              <input id="evt-end-time" class="field-input" type="text" placeholder="00:00" />
+            </div>
+          </div>
+          <div class="field-group">
+            <label class="field-label" data-i18n="evt_recurrence_label">Recorrência</label>
+            <select id="evt-recurrence" class="field-input field-select">
+              <option value="none" data-i18n="recurrence_none">Não se repete</option>
+              <option value="periodo" data-i18n="recurrence_periodo">Definir período</option>
+              <option value="daily" data-i18n="recurrence_daily">Diariamente</option>
+              <option value="weekly" data-i18n="recurrence_weekly">Semanalmente</option>
+              <option value="monthly" data-i18n="recurrence_monthly">Mensalmente</option>
+              <option value="yearly" data-i18n="recurrence_yearly">Anualmente</option>
+            </select>
           </div>
           <div class="field-group">
             <label class="field-label" data-i18n="evt_cat_label">Categoria</label>
@@ -1232,16 +1253,9 @@
               <span data-i18n="btn_ignore_instance">Desconsiderar neste dia</span>
             </button>
           </div>
-          <div class="field-group">
-            <label class="field-label" data-i18n="evt_recurrence_label">Recorrência</label>
-            <select id="evt-recurrence" class="field-input field-select">
-              <option value="none" data-i18n="recurrence_none">Não se repete</option>
-              <option value="daily" data-i18n="recurrence_daily">Diariamente</option>
-              <option value="weekly" data-i18n="recurrence_weekly">Semanalmente</option>
-              <option value="monthly" data-i18n="recurrence_monthly">Mensalmente</option>
-              <option value="yearly" data-i18n="recurrence_yearly">Anualmente</option>
-            </select>
-          </div>
+
+
+
           <div class="form-actions">
             <button type="button" id="btn-delete-event" class="btn btn-danger hidden">
               <span class="material-symbols-outlined" style="font-size: 18px; margin-right: 6px;">delete</span>

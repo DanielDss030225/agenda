@@ -1393,6 +1393,7 @@ select {
   margin: 10px auto 0;
   flex-shrink: 0;
   touch-action: none;
+  cursor: pointer;
   /* Impede o scroll de interferir no gesto */
 }
 
@@ -1404,6 +1405,7 @@ select {
   flex-shrink: 0;
   border-bottom: 1px solid var(--border);
   touch-action: none;
+  cursor: pointer;
   /* Impede o scroll de interferir no gesto */
 }
 
