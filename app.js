@@ -44,6 +44,46 @@ const S = {
 };
 
 // ======================== STATS TRACKING ========================
+function toDateStr(d) {
+  if (!d) return '';
+  const date = new Date(d);
+  const Y = date.getFullYear(), M = String(date.getMonth() + 1).padStart(2, '0'), D = String(date.getDate()).padStart(2, '0');
+  return `${Y}-${M}-${D}`;
+}
+
+// Convert YYYY-MM-DD to DD/MM/YYYY
+function fmtDate(s) {
+  if (!s || !s.includes('-')) return s || '';
+  const [y, m, d] = s.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+// Convert DD/MM/YYYY to YYYY-MM-DD
+function parseDate(s) {
+  if (!s || !s.includes('/')) return s || '';
+  const [d, m, y] = s.split('/');
+  return `${y}-${m}-${d}`;
+}
+
+// Input mask helper
+function applyMask(id, type) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('input', (e) => {
+    let v = e.target.value.replace(/\D/g, '');
+    if (type === 'date') {
+      if (v.length > 8) v = v.slice(0, 8);
+      if (v.length > 4) v = v.replace(/^(\d{2})(\d{2})(\d{4}).*/, '$1/$2/$3');
+      else if (v.length > 2) v = v.replace(/^(\d{2})(\d{2}).*/, '$1/$2');
+    } else if (type === 'time') {
+      if (v.length > 4) v = v.slice(0, 4);
+      if (v.length > 2) v = v.replace(/^(\d{2})(\d{2}).*/, '$1:$2');
+    }
+    e.target.value = v;
+    if (type === 'date' && id === 'evt-date') updateWorkBadge(v);
+  });
+}
+
 function trackAction(actionName) {
   if (!S.currentUser) return;
   try {
@@ -101,6 +141,9 @@ document.addEventListener('click', (e) => {
     const sheet = activeModal.querySelector('.modal-sheet');
     // Se o clique (tanto o mousedown quanto o mouseup/click target) for fora do "papel" do modal
     if (sheet && !sheet.contains(e.target) && !sheet.contains(mouseDownTarget)) {
+      // Ignorar se o clique for dentro do calendário do Flatpickr
+      if (e.target.closest('.flatpickr-calendar')) return;
+
       e.preventDefault();
       e.stopPropagation();
       play('click');
@@ -534,6 +577,13 @@ firebase.auth().onAuthStateChanged(async (user) => {
   }
 });
 
+window.setFPValue = function (id, val) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (id.includes('date')) el.value = fmtDate(val);
+  else el.value = val;
+};
+
 function initApp() {
   try {
     console.log("[DEBUG] Início do initApp");
@@ -560,6 +610,11 @@ function initApp() {
     if (typeof i18n !== 'undefined') i18n.applyToDOM();
     updateSoundIcon();
     runOnboardingFlow();
+
+    // Setup Custom Input Masks (No Popups)
+    applyMask('evt-date', 'date');
+    applyMask('trans-date', 'date');
+    applyMask('evt-time', 'time');
 
     // Inicializa estado do sidebar no Desktop
     if (localStorage.getItem('agbizu_sidebar_collapsed') === 'true' && window.innerWidth >= 900) {
@@ -1521,10 +1576,10 @@ function openEventForm(evt, clickedDate = null) {
   $('event-modal-title').textContent = evt ? t('edit_event') : t('new_event');
   $('evt-title').value = evt?.title || '';
   $('evt-desc').value = evt?.description || '';
-  $('evt-time').value = evt?.time || '';
+  setFPValue('evt-time', evt?.time || '');
 
   const displayDate = clickedDate || (evt?.date ? new Date(evt.date + 'T12:00:00') : (S.selectedDate || new Date()));
-  $('evt-date').value = toDateStr(displayDate);
+  setFPValue('evt-date', toDateStr(displayDate));
   $('evt-recurrence').value = evt?.recurrence || 'none';
 
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === (evt?.category || 'evento')));
@@ -1561,6 +1616,7 @@ function openEventForm(evt, clickedDate = null) {
 }
 
 function updateWorkBadge(ds) {
+  if (ds && ds.includes('/')) ds = parseDate(ds);
   const ws = getWorkStatus(new Date(ds + 'T12:00:00'), S.userScale);
   const b = $('event-work-badge');
   const t = (k) => typeof i18n !== 'undefined' ? i18n.t(k) : k;
@@ -1576,7 +1632,7 @@ async function saveEventForm(e) {
   e.preventDefault();
   if (isSavingEvent) return;
   const tEl = $('evt-title'), dEl = $('evt-date'), errT = $('err-title');
-  const title = tEl.value.trim(), date = dEl.value;
+  const title = tEl.value.trim(), date = parseDate(dEl.value);
 
   // Resetar erros
   errT.classList.add('hidden');
@@ -2117,7 +2173,7 @@ document.addEventListener('DOMContentLoaded', () => {
     S.customSeq = new Array(daysInMonth).fill(null);
     renderScalePreview();
   };
-  if ($('evt-date')) $('evt-date').onchange = (e) => updateWorkBadge(e.target.value);
+
   document.querySelectorAll('.cat-btn').forEach(b => b.onclick = () => { document.querySelectorAll('.cat-btn').forEach(x => x.classList.remove('active')); b.classList.add('active'); });
 
   // ---- Pesquisa ----
@@ -2248,7 +2304,7 @@ document.addEventListener('DOMContentLoaded', () => {
       play('click');
       const transId = S.editingTransactionId || Date.now().toString();
       const transAmount = parseFloat($('trans-amount').value) || 0;
-      const transDateValue = $('trans-date').value;
+      const transDateValue = parseDate($('trans-date').value);
       const transDescValue = $('trans-desc').value || (typeof i18n !== 'undefined' ? i18n.t('default_transaction') : 'Transação');
 
       const original = S.editingTransactionId ? S.transactions.find(t => t.id === S.editingTransactionId) : null;
@@ -2570,7 +2626,7 @@ window.openTransactionForm = function (d = null, trans = null) {
     if ($('trans-amount')) $('trans-amount').value = trans.amount || 0;
     // Se for ocorrência recorrente, d terá a data clicada
     const displayDate = d || (trans.date ? new Date(trans.date + 'T12:00:00') : new Date());
-    if ($('trans-date')) $('trans-date').value = toDateStr(displayDate);
+    if ($('trans-date')) setFPValue('trans-date', toDateStr(displayDate));
     if ($('trans-recurrence')) {
       $('trans-recurrence').value = trans.recurrence || 'none';
       if (trans.recurrence && trans.recurrence !== 'none') {
@@ -2609,7 +2665,7 @@ window.openTransactionForm = function (d = null, trans = null) {
     // Modo Novo
     if (titleEl) titleEl.textContent = t('finance_add') || 'Nova Transação';
     if (btnDel) btnDel.classList.add('hidden');
-    if ($('trans-date')) $('trans-date').value = toDateStr(d || new Date());
+    if ($('trans-date')) setFPValue('trans-date', toDateStr(d || new Date()));
     if ($('trans-recurrence')) $('trans-recurrence').value = 'none';
     $('group-installments')?.classList.add('hidden');
     if ($('trans-installments')) $('trans-installments').value = '';

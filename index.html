@@ -20,6 +20,7 @@
   <!-- Google Material Symbols -->
   <link rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
   <style>
     /* Language Toggle Button */
     .lang-toggle-btn {
@@ -1180,12 +1181,12 @@
           <div class="field-row">
             <div class="field-group flex-1">
               <label class="field-label" data-i18n="evt_date_label">Data *</label>
-              <input id="evt-date" class="field-input" type="date" />
+              <input id="evt-date" class="field-input" type="text" />
               <p id="err-date" class="form-error hidden" data-i18n="evt_date_error">Data inválida</p>
             </div>
             <div class="field-group flex-1">
               <label class="field-label" data-i18n="evt_time_label">Horário</label>
-              <input id="evt-time" class="field-input" type="time" />
+              <input id="evt-time" class="field-input" type="text" />
             </div>
           </div>
           <div class="field-group">
@@ -1338,9 +1339,9 @@
           style="font-size: 0.9rem; color: var(--text2); margin-bottom: 24px;">Deseja aplicar as edições em todas as
           ocorrências desta série ou somente nesta data específica?</p>
         <div style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
-          <button type="button" id="btn-save-recurring-all" class="btn btn-primary btn-full"
-            data-i18n="btn_apply_all">Toda a Série</button>
-          <button type="button" id="btn-save-recurring-instance" class="btn btn-outline btn-full"
+          <button type="button" id="btn-save-recurring-all" class="btn btn-primary" data-i18n="btn_apply_all">Toda a
+            Série</button>
+          <button type="button" id="btn-save-recurring-instance" class="btn btn-outline"
             data-i18n="btn_apply_instance">Somente nesta</button>
           <button type="button" id="btn-cancel-recurring-choice" class="btn btn-ghost btn-full" data-i18n="btn_cancel"
             style="color: var(--text3);">Cancelar</button>
@@ -1477,7 +1478,7 @@
             </div>
             <div class="field-group flex-1">
               <label class="field-label" data-i18n="finance_date">Data</label>
-              <input type="date" id="trans-date" class="field-input" required>
+              <input type="text" id="trans-date" class="field-input" required>
             </div>
           </div>
 
