@@ -1478,6 +1478,50 @@ function buildEventItem(ev, withActions = true, showDate = false, contextDate = 
   return wrap;
 }
 
+function buildFinanceSearchItem(t, showDate = false) {
+  const isChecked = !!t.checked;
+  const locale = typeof i18n !== 'undefined' ? i18n.t('locale') : 'pt-BR';
+  const div = document.createElement('div');
+  div.className = 'finance-item' + (isChecked ? ' checked' : '');
+  div.style = `display:flex; align-items:center; justify-content:space-between; padding:12px; background:var(--surface); border:1px solid var(--border); border-radius:12px; opacity: ${isChecked ? '0.6' : '1'}; transition: all 0.2s; margin-bottom: 8px;`;
+  
+  let dateHtml = '';
+  if (showDate && t.date) {
+    const d = new Date(t.date + 'T12:00:00');
+    dateHtml = `<div style="font-size:0.65rem; color:var(--text2); margin-bottom:4px;">${d.toLocaleDateString(locale)}${t.createdAt ? ` • ${(typeof i18n !== 'undefined' ? i18n.t('launched_on') : 'Lançado em')} ${new Date(t.createdAt).toLocaleDateString(locale)}` : ''}</div>`;
+  } else {
+    dateHtml = `<div style="font-size:0.65rem; color:var(--text2);">${t.date ? new Date(t.date + 'T12:00:00').toLocaleDateString(locale) : ''}${t.createdAt ? ` • ${(typeof i18n !== 'undefined' ? i18n.t('launched_on') : 'Lançado em')} ${new Date(t.createdAt).toLocaleDateString(locale)}` : ''}</div>`;
+  }
+
+  div.innerHTML = `
+    <div style="display:flex; align-items:center; gap:12px;">
+      <button class="btn btn-ghost btn-icon-sm" onclick="event.stopPropagation(); window.toggleTransactionStatus('${t.id}', event, '${t.occurrenceDate || t.date}')" style="color: ${isChecked ? 'var(--primary)' : 'var(--text3)'}; padding: 0; width: 28px; height: 28px; display: none;">
+        <span class="material-symbols-outlined" style="font-size:22px; font-variation-settings: 'FILL' ${isChecked ? 1 : 0}">${isChecked ? 'check_circle' : 'radio_button_unchecked'}</span>
+      </button>
+      <div style="background:${t.type === 'income' ? '#dcfce7' : '#fee2e2'}; color:${t.type === 'income' ? '#166534' : '#991b1b'}; width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center;">
+        <span class="material-symbols-outlined" style="font-size:18px;">${t.type === 'income' ? 'trending_up' : 'trending_down'}</span>
+      </div>
+      <div>
+        ${dateHtml}
+        <div>${truncate(t.desc)} ${t.installments > 0 ? `<span style="font-size:0.65rem; color:var(--text3);  margin-left:4px;">(${t.currentInstallment}/${t.installments})</span>` : ''}</div>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px;">
+        <div style="font-size:0.85rem;  color:${t.type === 'income' ? '#16a34a' : '#dc2626'}; text-decoration: ${isChecked ? 'line-through' : 'none'};">
+        ${t.type === 'income' ? '+' : '-'} ${formatVal(t.amount)}
+      </div>
+    </div>
+  `;
+  
+  div.onclick = (e) => {
+    if (e.target.closest('button')) return;
+    play('click');
+    if (document.getElementById('modal-search')) closeModal('modal-search');
+    window.openTransactionForm(null, t);
+  };
+  return div;
+}
+
 function openDayModal(d) {
   S.selectedDate = d;
   const locale = typeof i18n !== 'undefined' ? i18n.t('locale') : 'pt-BR';
@@ -1955,7 +1999,7 @@ function renderSearch(query) {
     countEl.style.gap = "5px";
   }
 
-  const filtered = S.events.filter(ev => {
+  const filteredEvents = S.events.filter(ev => {
     const d = new Date(ev.date + 'T12:00:00');
     return (
       ev.title.toLowerCase().includes(q) ||
@@ -1963,7 +2007,18 @@ function renderSearch(query) {
       (ev.category || '').toLowerCase().includes(q) ||
       d.toLocaleDateString(locale).includes(q)
     );
-  }).sort((a, b) => a.date.localeCompare(b.date));
+  }).map(ev => ({ ...ev, itemType: 'event' }));
+
+  const filteredTrans = S.transactions.filter(t => {
+    const d = new Date(t.date + 'T12:00:00');
+    return (
+      (t.desc || '').toLowerCase().includes(q) ||
+      (t.type || '').toLowerCase().includes(q) ||
+      d.toLocaleDateString(locale).includes(q)
+    );
+  }).map(t => ({ ...t, itemType: 'transaction' }));
+
+  const filtered = [...filteredEvents, ...filteredTrans].sort((a, b) => a.date.localeCompare(b.date));
 
   if (!filtered.length) {
     if (countEl) countEl.innerHTML = `0 <span data-i18n="events_count_zero">${t('events_count_zero')}</span>`;
@@ -1973,12 +2028,21 @@ function renderSearch(query) {
 
   // Deduplicar mantendo ordem original
   const dedupedFull = [];
-  const seen = new Set();
-  filtered.forEach(ev => {
-    const rootId = ev.parentEventId || ev.id;
-    if (!seen.has(rootId)) {
-      seen.add(rootId);
-      dedupedFull.push(ev);
+  const seenEvent = new Set();
+  const seenTrans = new Set();
+  filtered.forEach(item => {
+    if (item.itemType === 'transaction') {
+      const rootId = item.id;
+      if (!seenTrans.has(rootId)) {
+        seenTrans.add(rootId);
+        dedupedFull.push(item);
+      }
+    } else {
+      const rootId = item.parentEventId || item.id;
+      if (!seenEvent.has(rootId)) {
+        seenEvent.add(rootId);
+        dedupedFull.push(item);
+      }
     }
   });
 
@@ -2002,8 +2066,12 @@ function renderSearchPage() {
   const end = start + S.searchState.pageSize;
   const items = S.searchState.results.slice(start, end);
 
-  items.forEach(ev => {
-    resultsEl.appendChild(buildEventItem(ev, false, true));
+  items.forEach(item => {
+    if (item.itemType === 'transaction') {
+      resultsEl.appendChild(buildFinanceSearchItem(item, true));
+    } else {
+      resultsEl.appendChild(buildEventItem(item, false, true));
+    }
   });
 
   if (end < S.searchState.results.length) {

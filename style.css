@@ -1688,14 +1688,17 @@ select {
   /* Previne que o card seja esmagado em listas flex */
 }
 
-.event-item:hover {
-  background: var(--surface2);
+.event-item:hover,
+.finance-item:hover {
+  background: var(--surface2) !important;
   transform: translateY(-2px);
-  box-shadow: var(--shadow);
-  border-color: var(--primary-lt);
+  box-shadow: var(--shadow) !important;
+  border-color: var(--primary-lt) !important;
+  cursor: pointer;
 }
 
-.event-item:active {
+.event-item:active,
+.finance-item:active {
   transform: scale(0.98);
 }
 
@@ -1842,8 +1845,8 @@ select {
 
 /* ===== SCALE PREVIEW ===== */
 .scale-preview-wrap {
-  max-height: 50dvh;
-  overflow-y: hidden !important;
+  height: auto;
+  overflow-y: visible !important;
   padding-bottom: 10px !important;
 }
 
@@ -1863,8 +1866,9 @@ select {
 
 .scale-mini-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 5px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  width: 100%;
   max-width: 340px;
   margin: 0 auto;
 }
