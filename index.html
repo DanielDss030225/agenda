@@ -707,6 +707,10 @@
             <span class="material-symbols-outlined" style="margin-right:8px;">payments</span>
             <span data-i18n="finance_title">Finanças</span>
           </button>
+          <button id="btn-open-settings" class="btn btn-outline btn-full" style="margin-bottom: 10px;">
+            <span class="material-symbols-outlined" style="margin-right:8px;">settings</span>
+            <span data-i18n="btn_settings">Configurações</span>
+          </button>
           <button id="btn-toggle-global-finance" class="btn btn-outline btn-full" style="margin-bottom: 10px;">
             <div id="icon-finance-visible" style="margin-right:8px; display: flex; align-items:center;">
               <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px"
@@ -1439,6 +1443,7 @@
             style="background: #f0fdf4; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #bbf7d0;">
             <div style="font-size: 0.65rem; color: #15803d; text-transform: uppercase; " data-i18n="finance_balance">
               Saldo</div>
+            <div id="finance-list-status" class="hidden" style="font-size: 0.8rem; color: #dc2626; margin-bottom: 8px; text-align: center;"></div>
             <div id="fin-total-balance" style="font-size: 1.1rem;  color: #052e16; line-height: 1;">R$
               0,00</div>
           </div>
@@ -1447,6 +1452,46 @@
         <div id="finance-list"
           style="display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow-y: auto; padding-right: 4px; min-height: 50vh;">
           <!-- List handled by JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- SETTINGS MODAL -->
+  <div id="modal-settings" class="modal-overlay hidden">
+    <div class="modal-sheet modal-sheet-auto">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div class="modal-title" data-i18n="btn_settings">Configurações</div>
+        <button id="btn-close-settings" class="btn btn-ghost btn-icon-sm modal-close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="field-group">
+          <label class="field-label" data-i18n="login_name_label">Nome Completo</label>
+          <input type="text" id="settings-name" class="field-input">
+        </div>
+        <div class="field-group">
+          <label class="field-label" data-i18n="settings_whatsapp_label">Número WhatsApp (com DDD)</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="tel" id="settings-phone" class="field-input" placeholder="Ex: 5511999999999" style="flex: 1;">
+            <button id="btn-request-verify" class="btn btn-outline btn-sm" style="white-space: nowrap;">Verificar</button>
+          </div>
+          <p id="settings-phone-hint" style="font-size: 0.7rem; color: var(--text3); margin-top: 4px;">Utilizado para envio de notificações automáticas via WhatsApp.</p>
+          <p id="settings-verify-status" class="hidden" style="font-size: 0.7rem; color: #16a34a; font-weight: 500; margin-top: 2px;"></p>
+        </div>
+        
+        <div id="group-settings-verify-code" class="field-group hidden" style="background: var(--surface2); padding: 12px; border-radius: 8px; border: 1px dashed var(--primary-lt);">
+          <label class="field-label" style="font-size: 0.75rem;">Digite o código enviado ao seu WhatsApp</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="settings-verify-code" class="field-input" placeholder="0000" maxlength="4" style="text-align: center; letter-spacing: 4px; font-weight: bold;">
+            <button id="btn-confirm-verify" class="btn btn-primary btn-sm">Validar</button>
+          </div>
+        </div>
+
+        <div id="settings-form-actions" class="form-actions hidden">
+          <button id="btn-save-settings" class="btn btn-primary btn-full" data-i18n="btn_save" disabled>Salvar Alterações</button>
         </div>
       </div>
     </div>
@@ -1522,6 +1567,7 @@
             </div>
           </div>
 
+          <div id="transaction-form-status" class="hidden" style="font-size: 0.8rem; color: #dc2626; margin-bottom: 8px; text-align: center;"></div>
           <div class="form-actions" style="margin-top: 20px;">
             <button type="button" id="btn-delete-transaction" class="btn btn-danger hidden">
               <span class="material-symbols-outlined" style="font-size: 18px; margin-right: 6px;">delete</span>
@@ -1777,6 +1823,29 @@
     </button>
   </div>
 
+
+  <!-- INSTALL APP MODAL -->
+  <div id="modal-install-app" class="modal-overlay hidden">
+    <div class="modal-sheet modal-sheet-auto">
+      <div class="modal-handle"></div>
+      <div class="modal-body text-center" style="padding: 24px 16px;">
+        <div style="background: var(--primary-lt); color: var(--primary); width: 80px; height: 80px; border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; box-shadow: var(--shadow);">
+          <span class="material-symbols-outlined" style="font-size: 48px;">shop_two</span>
+        </div>
+        <h2 style="font-size: 1.4rem; color: var(--text); margin-bottom: 12px;" data-i18n="install_app_title">Melhore sua Experiência!</h2>
+        <p style="font-size: 0.95rem; color: var(--text2); line-height: 1.6; margin-bottom: 24px;" data-i18n="install_app_desc">
+          Baixe nosso aplicativo oficial na Play Store para ter acesso a notificações em tempo real e uma navegação muito mais rápida.
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
+          <a href="https://play.google.com/store/apps/details?id=viewgo.ag.bizu.com&pcampaignid=web_share" target="_blank" class="btn btn-primary btn-lg" style="text-decoration: none;" onclick="closeModal('modal-install-app'); localStorage.setItem('agbizu_install_dismissed', 'true');">
+            <span class="material-symbols-outlined">download</span>
+            <span data-i18n="btn_download_app">Baixar na Play Store</span>
+          </a>
+          <button type="button" class="btn btn-ghost" onclick="closeModal('modal-install-app'); localStorage.setItem('agbizu_install_dismissed', 'true');" data-i18n="btn_later">Mais tarde</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container"></div>

@@ -58,7 +58,12 @@ async function loadDashboard() {
         renderUserGrid(userList);
     } catch (e) {
         console.error("Erro ao carregar dashboard:", e);
-        alert("Erro de permissão no Firebase. Verifique as regras do banco de dados.");
+        const errorEl = document.getElementById('auth-error');
+        if (errorEl) {
+            errorEl.textContent = "Erro de permissão no Firebase. Verifique as regras do banco de dados.";
+            errorEl.classList.remove('hidden');
+            document.getElementById('auth-overlay').classList.remove('hidden');
+        }
     }
 }
 
@@ -131,6 +136,17 @@ function openUserModal(userId) {
     document.getElementById('user-modal').classList.remove('hidden');
 }
 
+function showAdmStatus(msg, isError = false) {
+    const el = document.getElementById('adm-modal-status');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.color = isError ? "#dc2626" : "#16a34a";
+    el.classList.remove('hidden');
+    setTimeout(() => {
+        el.classList.add('hidden');
+    }, 4000);
+}
+
 async function resetUserPassword() {
     if (!currentModalUserId) return;
     const user = allUsers[currentModalUserId];
@@ -140,10 +156,10 @@ async function resetUserPassword() {
 
     try {
         await firebase.auth().sendPasswordResetEmail(user.email);
-        alert("E-mail de redefinição enviado com sucesso!");
+        showAdmStatus("E-mail de redefinição enviado com sucesso!");
     } catch (e) {
         console.error("Erro ao enviar reset:", e);
-        alert("Erro ao enviar e-mail: " + (e.message || "Tente novamente mais tarde."));
+        showAdmStatus("Erro ao enviar e-mail: " + (e.message || "Tente novamente mais tarde."), true);
     }
 }
 
@@ -152,17 +168,17 @@ async function saveUserInfo() {
     const newName = document.getElementById('modal-user-name-input').value.trim();
 
     if (!newName) {
-        alert("O nome não pode estar vazio.");
+        showAdmStatus("O nome não pode estar vazio.", true);
         return;
     }
 
     try {
         await db.ref(`users/${currentModalUserId}`).update({ displayName: newName });
-        alert("Dados atualizados com sucesso!");
+        showAdmStatus("Dados atualizados com sucesso!");
         loadDashboard(); // Recarrega a lista
     } catch (e) {
         console.error("Erro ao salvar:", e);
-        alert("Erro ao salvar alterações.");
+        showAdmStatus("Erro ao salvar alterações.", true);
     }
 }
 
@@ -176,12 +192,12 @@ async function deleteUser() {
 
     try {
         await db.ref(`users/${currentModalUserId}`).remove();
-        alert("Usuário removido da base de dados com sucesso!");
-        closeUserModal();
+        showAdmStatus("Usuário removido da base de dados com sucesso!");
+        setTimeout(() => closeUserModal(), 2000);
         loadDashboard();
     } catch (e) {
         console.error("Erro ao deletar:", e);
-        alert("Erro ao deletar usuário.");
+        showAdmStatus("Erro ao deletar usuário.", true);
     }
 }
 

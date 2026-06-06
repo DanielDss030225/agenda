@@ -62,6 +62,8 @@ const TRANSLATIONS = {
     btn_sound_title: 'Sons',
     btn_logout_title: 'Sair',
     btn_lang: 'Idioma',
+    btn_settings: 'Configurações',
+    settings_whatsapp_label: 'Número WhatsApp (Ex: 5511999999999)',
 
     // ---- Scale Bar ----
     events_count_zero: 'eventos',
@@ -202,6 +204,10 @@ const TRANSLATIONS = {
     btn_apply_all: 'Toda a Série',
     btn_apply_instance: 'Somente nesta',
     ignored_instance_badge: 'DESCONSIDERADO',
+    install_app_title: 'Melhore sua Experiência!',
+    install_app_desc: 'Baixe nosso aplicativo oficial na Play Store para ter acesso a notificações em tempo real e uma navegação muito mais rápida.',
+    btn_download_app: 'Baixar na Play Store',
+    btn_later: 'Mais tarde',
 
     // ---- Bible Modal ----
     btn_amen: 'Amém',
@@ -376,6 +382,8 @@ const TRANSLATIONS = {
     btn_sound_title: 'Sound',
     btn_logout_title: 'Logout',
     btn_lang: 'Language',
+    btn_settings: 'Settings',
+    settings_whatsapp_label: 'WhatsApp Number (Ex: 5511999999999)',
 
     // ---- Scale Bar ----
     events_count_zero: 'events',
@@ -505,6 +513,10 @@ const TRANSLATIONS = {
     btn_apply_all: 'All Occurrences',
     btn_apply_instance: 'Only this one',
     ignored_instance_badge: 'IGNORED',
+    install_app_title: 'Enhance Your Experience!',
+    install_app_desc: 'Download our official app from the Play Store for real-time notifications and faster navigation.',
+    btn_download_app: 'Download on Play Store',
+    btn_later: 'Later',
     logout_title: 'Log Out?',
     logout_desc: 'You will need to log in again to access your data.',
     btn_logout_cancel: 'Cancel',

@@ -1762,6 +1762,18 @@ select {
   font-size: .85rem;
 }
 
+.event-item.completed {
+  opacity: 0.7;
+}
+
+.event-item.completed .event-title {
+  color: var(--text3);
+}
+
+.event-item.completed .event-stripe {
+  filter: grayscale(0.6) opacity(0.5);
+}
+
 /* ===== WORK STATUS CARD ===== */
 .work-status-card {
   display: flex;
@@ -2978,6 +2990,7 @@ textarea {
 
   color: var(--text2);
   line-height: 1;
+  display: none !important;
 }
 
 .toast-buttons {

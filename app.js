@@ -40,7 +40,10 @@ const S = {
   editingTransactionId: null,
   editingOccurrenceDate: null,
   showGlobalFinance: localStorage.getItem('agbizu_show_global_finance') !== 'false',
-  sessionStartTime: Date.now()
+  sessionStartTime: Date.now(),
+  pendingVerificationCode: null,
+  isPhoneVerified: false,
+  verifiedPhone: null
 };
 
 // ======================== STATS TRACKING ========================
@@ -1226,15 +1229,28 @@ function initMonthSwiper(year) {
 
       let pillsHtml = '';
       const allItems = [
-        ...evs.filter(e => !e.isIgnored).map(ev => ({ type: 'event', title: ev.title, time: ev.time, color: catColor(ev.category) })),
-        ...trs.filter(t => !t.isIgnored).map(t => ({ type: 'finance', title: t.desc, amount: t.amount, color: t.type === 'income' ? '#16a34a' : '#dc2626' }))
+        ...evs.filter(e => !e.isIgnored).map(ev => ({
+          type: 'event',
+          title: ev.title,
+          time: ev.time,
+          color: catColor(ev.category),
+          completed: !!ev.completed
+        })),
+        ...trs.filter(t => !t.isIgnored).map(t => ({
+          type: 'finance',
+          title: t.desc,
+          amount: t.amount,
+          color: t.type === 'income' ? '#16a34a' : '#dc2626',
+          completed: !!t.checked
+        }))
       ];
 
       pillsHtml = allItems.slice(0, 2).map(item => {
         const text = item.type === 'event'
           ? (item.time ? item.time + ' ' : '') + item.title
           : (item.type === 'finance' ? (item.color === '#16a34a' ? '+' : '-') + ' ' + formatVal(item.amount) + ' ' + item.title : '');
-        return `<div class="day-event-pill" style="background:${item.color}">${text}</div>`;
+        const style = item.completed ? 'text-decoration: line-through; opacity: 0.5;' : '';
+        return `<div class="day-event-pill" style="background:${item.color}; ${style}">${text}</div>`;
       }).join('');
 
       cell.innerHTML = `
@@ -1415,8 +1431,9 @@ function truncate(str, len = 20) {
 function buildEventItem(ev, withActions = true, showDate = false, contextDate = null) {
   const t = (k) => typeof i18n !== 'undefined' ? i18n.t(k) : k;
   const locale = typeof i18n !== 'undefined' ? i18n.t('locale') : 'pt-BR';
+  const isCompleted = !!ev.completed;
   const wrap = document.createElement('div');
-  wrap.className = 'event-item';
+  wrap.className = 'event-item' + (isCompleted ? ' completed' : '');
   if (ev.isIgnored) wrap.style.opacity = '0.5';
 
   let dateHtml = '';
@@ -1432,9 +1449,14 @@ function buildEventItem(ev, withActions = true, showDate = false, contextDate = 
 
   wrap.innerHTML = `
     <div class="event-stripe" style="background:${catColor(ev.category)}"></div>
-    <div class="event-body">
+    <div style="display:flex; align-items:center; padding-left: 8px;">
+      <button class="btn btn-ghost btn-icon-sm" onclick="window.toggleEventStatus('${ev.id}', event, '${ev.occurrenceDate || ev.date}')" style="color: ${isCompleted ? 'var(--primary)' : 'var(--text3)'}; padding: 0; width: 32px; height: 32px; flex-shrink: 0;">
+        <span class="material-symbols-outlined" style="font-size:24px; font-variation-settings: 'FILL' ${isCompleted ? 1 : 0}">${isCompleted ? 'check_circle' : 'radio_button_unchecked'}</span>
+      </button>
+    </div>
+    <div class="event-body" style="padding-left: 4px;">
       <div style="display:flex; align-items:center; justify-content: space-between; gap: 8px;">
-        <div class="event-title" style="${ev.isIgnored ? 'text-decoration: line-through;' : ''}">${escHtml(ev.title)}</div>
+        <div class="event-title" style="${(ev.isIgnored || isCompleted) ? 'text-decoration: line-through;' : ''}">${escHtml(ev.title)}</div>
         ${dateHtml}
       </div>
       <div class="event-meta">
@@ -1484,7 +1506,7 @@ function buildFinanceSearchItem(t, showDate = false) {
   const div = document.createElement('div');
   div.className = 'finance-item' + (isChecked ? ' checked' : '');
   div.style = `display:flex; align-items:center; justify-content:space-between; padding:12px; background:var(--surface); border:1px solid var(--border); border-radius:12px; opacity: ${isChecked ? '0.6' : '1'}; transition: all 0.2s; margin-bottom: 8px;`;
-  
+
   let dateHtml = '';
   if (showDate && t.date) {
     const d = new Date(t.date + 'T12:00:00');
@@ -1512,7 +1534,7 @@ function buildFinanceSearchItem(t, showDate = false) {
       </div>
     </div>
   `;
-  
+
   div.onclick = (e) => {
     if (e.target.closest('button')) return;
     play('click');
@@ -1772,7 +1794,7 @@ async function saveEventForm(e) {
       finishSave();
     } catch (err) {
       console.error("Erro ao salvar sobreposição:", err);
-      alert(typeof i18n !== 'undefined' ? i18n.t('err_apply_override') : "Erro ao aplicar edição específica.");
+      createToast({ title: "Erro", message: (typeof i18n !== 'undefined' ? i18n.t('err_apply_override') : "Erro ao aplicar edição específica."), type: "error", icon: "error" });
       hideLoading();
       isSavingEvent = false;
     }
@@ -2448,9 +2470,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const mainPropsSame = (saveDataLocal.desc === original.desc && saveDataLocal.amount === original.amount && saveDataLocal.type === original.type && saveDataLocal.date === original.date);
 
         if (recurrenceChanged) {
-          hideOnlyThis = true; // Não permite "Somente nesta" se a regra de repetição mudou
+          hideOnlyThis = true;
           if (mainPropsSame) {
-            // Se alterou *apenas* a repetição/parcelas, aplica em todas direto pulando o modal
             shouldAsk = false;
           }
         }
@@ -2496,7 +2517,14 @@ document.addEventListener('DOMContentLoaded', () => {
           finishTransSave();
         } catch (err) {
           console.error("Erro ao salvar sobreposição de transação:", err);
-          alert(typeof i18n !== 'undefined' ? i18n.t('err_process_transaction') : "Erro ao processar transação.");
+          const msg = typeof i18n !== 'undefined' ? i18n.t('err_process_transaction') : "Erro ao processar transação.";
+          const statusEl = $('transaction-form-status');
+          if (statusEl) {
+            statusEl.textContent = msg;
+            statusEl.classList.remove('hidden');
+          } else {
+            createToast({ title: "Erro", message: msg, type: "error", icon: "error" });
+          }
           hideLoading();
         }
       };
@@ -2512,27 +2540,208 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch (err) {
         hideLoading();
         console.error("Error saving transaction:", err);
-        alert(typeof i18n !== 'undefined' ? i18n.t('err_save_transaction') : "Erro ao salvar transação. Verifique sua conexão.");
+        const msg = typeof i18n !== 'undefined' ? i18n.t('err_save_transaction') : "Erro ao salvar transação. Verifique sua conexão.";
+        const statusEl = $('transaction-form-status');
+        if (statusEl) {
+          statusEl.textContent = msg;
+          statusEl.classList.remove('hidden');
+        } else {
+          createToast({ title: "Erro", message: msg, type: "error", icon: "error" });
+        }
         isSavingTrans = false;
+      }
+    };
+  }
+
+  // ======================== SETTINGS LOGIC ========================
+  window.openSettings = function () {
+    if (!S.currentUser) return;
+    showLoading();
+    play('click');
+    userRef().once('value', (snap) => {
+      hideLoading();
+      const data = snap.val() || {};
+      const phoneVal = data.phoneNumber || '';
+
+      if ($('settings-name')) $('settings-name').value = data.displayName || '';
+      if ($('settings-phone')) {
+        $('settings-phone').value = phoneVal;
+        S.verifiedPhone = phoneVal || null;
+        S.isPhoneVerified = !!phoneVal;
+      }
+
+      // Resetar UI de verificação
+      if ($('group-settings-verify-code')) $('group-settings-verify-code').classList.add('hidden');
+      if ($('settings-verify-code')) $('settings-verify-code').value = '';
+      if ($('settings-verify-status')) {
+        $('settings-verify-status').textContent = '';
+        $('settings-verify-status').classList.add('hidden');
+      }
+
+      // Decidir se mostra o botão Salvar
+      const actions = $('settings-form-actions');
+      if (actions) {
+        if (phoneVal === "") {
+          actions.classList.add('hidden'); // Oculto se vazio (conforme solicitado)
+        } else {
+          actions.classList.remove('hidden'); // Já está verificado no banco
+        }
+        if ($('btn-save-settings')) $('btn-save-settings').disabled = false;
+      }
+
+      openModal('modal-settings');
+    });
+  };
+
+  window.requestVerification = async function () {
+    const phone = $('settings-phone').value.trim();
+    const statusEl = $('settings-verify-status');
+    if (!phone || phone.length < 10) {
+      if (statusEl) {
+        statusEl.textContent = "Por favor, digite um número válido com DDD (Ex: 5511999999999)";
+        statusEl.style.color = "#dc2626";
+        statusEl.classList.remove('hidden');
+      }
+      return;
+    }
+
+    showLoading('loading_wait');
+    play('click');
+
+    // Gerar código de 4 dígitos
+    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    S.pendingVerificationCode = code;
+
+    try {
+      // Enviar para a fila que o Bot escuta
+      await db.ref('verification_queue').push({
+        userId: S.currentUser,
+        phoneNumber: phone,
+        code: code,
+        timestamp: Date.now()
+      });
+
+      hideLoading();
+      if ($('group-settings-verify-code')) $('group-settings-verify-code').classList.remove('hidden');
+      if ($('settings-form-actions')) $('settings-form-actions').classList.add('hidden');
+
+      const statusEl = $('settings-verify-status');
+      if (statusEl) {
+        statusEl.textContent = "Código enviado com sucesso!";
+        statusEl.style.color = "#16a34a"; // Green for success
+        statusEl.classList.remove('hidden');
+      }
+    } catch (err) {
+      hideLoading();
+      const statusEl = $('settings-verify-status');
+      if (statusEl) {
+        statusEl.textContent = "Erro: " + err.message;
+        statusEl.style.color = "#dc2626"; // Red for error
+        statusEl.classList.remove('hidden');
+      }
+    }
+  };
+
+  window.confirmVerification = function () {
+    const inputCode = $('settings-verify-code').value.trim();
+    const statusEl = $('settings-verify-status');
+    if (inputCode === S.pendingVerificationCode) {
+      S.isPhoneVerified = true;
+      S.verifiedPhone = $('settings-phone').value.trim();
+      if ($('settings-form-actions')) $('settings-form-actions').classList.remove('hidden');
+      if ($('btn-save-settings')) $('btn-save-settings').disabled = false;
+      if ($('group-settings-verify-code')) $('group-settings-verify-code').classList.add('hidden');
+      if (statusEl) {
+        statusEl.textContent = "WhatsApp validado com sucesso!";
+        statusEl.style.color = "#16a34a";
+        statusEl.classList.remove('hidden');
+      }
+    } else {
+      if (statusEl) {
+        statusEl.textContent = "Código incorreto. Tente novamente.";
+        statusEl.style.color = "#dc2626";
+        statusEl.classList.remove('hidden');
+      }
+    }
+  };
+
+  window.saveSettings = async function () {
+    if (!S.currentUser) return;
+    const name = $('settings-name').value.trim();
+    const phone = $('settings-phone').value.trim();
+    const statusEl = $('settings-verify-status');
+
+    if (!name) {
+      if (statusEl) {
+        statusEl.textContent = "O nome não pode estar vazio.";
+        statusEl.style.color = "#dc2626";
+        statusEl.classList.remove('hidden');
+      }
+      return;
+    }
+
+    // Se o número mudou e não foi validado (exceto se ficou vazio)
+    if (phone !== S.verifiedPhone && phone !== "") {
+      if (statusEl) {
+        statusEl.textContent = "Por favor, valide seu novo número de WhatsApp antes de salvar.";
+        statusEl.style.color = "#dc2626";
+        statusEl.classList.remove('hidden');
+      }
+      return;
+    }
+
+    showLoading('loading_saving');
+    play('click');
+    try {
+      await userRef().update({
+        displayName: name,
+        phoneNumber: phone
+      });
+      closeModal('modal-settings');
+      hideLoading();
+      createToast({ title: "Sucesso", message: "Configurações salvas!", type: "success" });
+    } catch (err) {
+      hideLoading();
+      if (statusEl) {
+        statusEl.textContent = "Erro ao salvar: " + err.message;
+        statusEl.style.color = "#dc2626";
+        statusEl.classList.remove('hidden');
+      } else {
+        createToast({ title: "Erro", message: "Erro ao salvar: " + err.message, type: "error" });
+      }
+    }
+  };
+
+  if ($('btn-open-settings')) $('btn-open-settings').onclick = window.openSettings;
+  if ($('btn-close-settings')) $('btn-close-settings').onclick = () => closeModal('modal-settings');
+  if ($('btn-save-settings')) $('btn-save-settings').onclick = window.saveSettings;
+  if ($('btn-request-verify')) $('btn-request-verify').onclick = window.requestVerification;
+  if ($('btn-confirm-verify')) $('btn-confirm-verify').onclick = window.confirmVerification;
+
+  // Lógica para detectar mudança no telefone e esconder o botão de salvar
+  if ($('settings-phone')) {
+    $('settings-phone').oninput = () => {
+      const currentVal = $('settings-phone').value.trim();
+      const actions = $('settings-form-actions');
+      if (!actions) return;
+
+      // Se estiver vazio OU for diferente do verificado, esconde o botão
+      if (currentVal === "" || (currentVal !== S.verifiedPhone)) {
+        actions.classList.add('hidden');
+      } else {
+        actions.classList.remove('hidden');
+        if ($('btn-save-settings')) $('btn-save-settings').disabled = false;
       }
     };
   }
 
   if ($('btn-add-fin-from-day')) {
     $('btn-add-fin-from-day').onclick = () => {
-      console.log("[DEBUG] Botão 'Nova Transação' clicado");
       play('click');
       const d = S.selectedDate || new Date();
-      console.log("[DEBUG] Data selecionada:", d);
-
-      console.log("[DEBUG] Tentando fechar modal-day");
       closeModal('modal-day');
-
-      console.log("[DEBUG] Chamando window.openTransactionForm");
       window.openTransactionForm(d);
     };
-  } else {
-    console.warn("[DEBUG] Elemento 'btn-add-fin-from-day' NÃO encontrado no DOM durante registro");
   }
 
   if ($('btn-ignore-event-instance')) {
@@ -2647,9 +2856,10 @@ function updateFinanceUI() {
     const d = new Date(y, m, i);
     const trs = getTransactionsForDate(d);
     trs.forEach(t => {
-      if (t.isIgnored) return;
-      if (t.type === 'income') totalInc += t.amount;
-      else totalExp += t.amount;
+      if (!t.isIgnored) {
+        if (t.type === 'income') totalInc += t.amount;
+        else totalExp += t.amount;
+      }
       if (!allForMonth.some(x => x.id === t.id && x.occurrenceDate === t.occurrenceDate)) {
         allForMonth.push(t);
       }
@@ -2687,11 +2897,12 @@ function renderFinanceList(list) {
     return;
   }
 
-  list.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(t => {
+  list.sort((a, b) => new Date(a.occurrenceDate || a.date) - new Date(b.occurrenceDate || b.date)).forEach(t => {
     const isChecked = !!t.checked;
+    const isIgnored = !!t.isIgnored;
     const div = document.createElement('div');
-    div.className = 'finance-item' + (isChecked ? ' checked' : '');
-    div.style = `display:flex; align-items:center; justify-content:space-between; padding:12px; background:var(--surface); border:1px solid var(--border); border-radius:12px; opacity: ${isChecked ? '0.6' : '1'}; transition: all 0.2s;`;
+    div.className = 'finance-item' + (isChecked ? ' checked' : '') + (isIgnored ? ' ignored' : '');
+    div.style = `display:flex; align-items:center; justify-content:space-between; padding:12px; background:var(--surface); border:1px solid var(--border); border-radius:12px; opacity: ${(isChecked || isIgnored) ? '0.6' : '1'}; transition: all 0.2s;`;
     div.innerHTML = `
       <div style="display:flex; align-items:center; gap:12px;">
         <button class="btn btn-ghost btn-icon-sm" onclick="window.toggleTransactionStatus('${t.id}', event, '${t.occurrenceDate}')" style="color: ${isChecked ? 'var(--primary)' : 'var(--text3)'}; padding: 0; width: 28px; height: 28px;">
@@ -2701,12 +2912,13 @@ function renderFinanceList(list) {
           <span class="material-symbols-outlined" style="font-size:18px;">${t.type === 'income' ? 'trending_up' : 'trending_down'}</span>
         </div>
         <div>
-          <div>${truncate(t.desc)} ${t.installments > 0 ? `<span style="font-size:0.65rem; color:var(--text3);  margin-left:4px;">(${t.currentInstallment}/${t.installments})</span>` : ''}</div>
-          <div style="font-size:0.65rem; color:var(--text2);">${new Date(t.date + 'T12:00:00').toLocaleDateString(typeof i18n !== 'undefined' ? i18n.t('locale') : 'pt-BR')}${t.createdAt ? ` • ${typeof i18n !== 'undefined' ? i18n.t('launched_on') : 'Lançado em'} ${new Date(t.createdAt).toLocaleDateString(typeof i18n !== 'undefined' ? i18n.t('locale') : 'pt-BR')}` : ''}</div>
+          <div style="${(isChecked || isIgnored) ? 'text-decoration: line-through; color: var(--text3);' : ''}">${truncate(t.desc)} ${t.installments > 0 ? `<span style="font-size:0.65rem; color:var(--text3);  margin-left:4px;">(${t.currentInstallment}/${t.installments})</span>` : ''}</div>
+          <div style="font-size:0.65rem; color:var(--text2);">${new Date((t.occurrenceDate || t.date) + 'T12:00:00').toLocaleDateString(typeof i18n !== 'undefined' ? i18n.t('locale') : 'pt-BR')}${t.createdAt ? ` • ${typeof i18n !== 'undefined' ? i18n.t('launched_on') : 'Lançado em'} ${new Date(t.createdAt).toLocaleDateString(typeof i18n !== 'undefined' ? i18n.t('locale') : 'pt-BR')}` : ''}</div>
+          ${isIgnored ? `<div style="font-size:0.6rem; color:var(--danger); font-weight: 600; text-transform: uppercase; margin-top: 2px;">${typeof i18n !== 'undefined' ? i18n.t('ignored_instance_badge') : 'Desconsiderado'}</div>` : ''}
         </div>
       </div>
       <div style="display:flex; align-items:center; gap:12px;">
-          <div style="font-size:0.85rem;  color:${t.type === 'income' ? '#16a34a' : '#dc2626'}; text-decoration: ${isChecked ? 'line-through' : 'none'};">
+          <div style="font-size:0.85rem;  color:${t.type === 'income' ? '#16a34a' : '#dc2626'}; text-decoration: ${(isChecked || isIgnored) ? 'line-through' : 'none'};">
           ${t.type === 'income' ? '+' : '-'} ${formatVal(t.amount)}
         </div>
         <button class="btn btn-ghost btn-icon-sm" onclick="window.deleteTransaction('${t.id}')" style="display:none;">
@@ -2849,6 +3061,44 @@ window.toggleTransactionStatus = async function (id, event, dateStr = null) {
   }
 };
 
+window.toggleEventStatus = async function (id, event, dateStr = null) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  const ev = S.events.find(x => x.id === id);
+  if (!ev) return;
+
+  const targetDate = dateStr || ev.date;
+  const isRecurring = ev.recurrence && ev.recurrence !== 'none';
+
+  // Determinar estado atual (prioridade no override)
+  const currentCompleted = (ev.overrides && ev.overrides[targetDate] && ev.overrides[targetDate].completed !== undefined)
+    ? ev.overrides[targetDate].completed
+    : !!ev.completed;
+
+  const newState = !currentCompleted;
+
+  try {
+    if (isRecurring) {
+      if (!ev.overrides) ev.overrides = {};
+      if (!ev.overrides[targetDate]) ev.overrides[targetDate] = {};
+      ev.overrides[targetDate].completed = newState;
+      await userRef(`events/${id}/overrides/${targetDate}`).update({ completed: newState });
+    } else {
+      ev.completed = newState;
+      await userRef(`events/${id}`).update({ completed: newState });
+    }
+
+    if (!$('modal-day').classList.contains('hidden') && S.selectedDate) openDayModal(S.selectedDate);
+    // Notificamos o calendário para atualizar os dots se necessário
+    S.lastRenderedYear = null;
+    refreshCalendar();
+  } catch (err) {
+    console.error("Error toggling event status:", err);
+  }
+};
+
 function getShortestPattern(arr) {
   const n = arr.length;
   // Patterns like 2, 3, 4, 12/36, etc.
@@ -2953,10 +3203,7 @@ function createToast(options = {}) {
       </div>
     </div>
     <div class="toast-footer">
-      <label class="toast-checkbox-wrapper">
-        <input type="checkbox" id="toast-dont-show-${options.id}">
-        <span class="toast-checkbox-label">${t('toast_dont_show_again')}</span>
-      </label>
+     
       <div class="toast-buttons">
         ${options.secondaryBtn ? `<button class="toast-btn ghost" id="toast-btn-sec-${options.id}">${options.secondaryBtn}</button>` : ''}
         <button class="toast-btn primary" id="toast-btn-main-${options.id}">${options.primaryBtn || 'OK'}</button>
@@ -3008,6 +3255,12 @@ function showPromotionalToasts() {
   if (document.querySelector('.modal-overlay:not(.hidden)')) return;
   const lp = document.getElementById('lang-picker-overlay');
   if (lp && lp.style.display !== 'none' && !lp.classList.contains('hide')) return;
+
+  // 0. Prompt de Instalação (Mobile)
+  if (window.innerWidth < 900 && !localStorage.getItem('agbizu_install_dismissed')) {
+    setTimeout(() => openModal('modal-install-app'), 2000);
+    return; // Não mostra outros toasts se este modal abrir para evitar poluição
+  }
 
   const t = (k) => typeof i18n !== 'undefined' ? i18n.t(k) : k;
 
