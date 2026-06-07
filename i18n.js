@@ -63,7 +63,9 @@ const TRANSLATIONS = {
     btn_logout_title: 'Sair',
     btn_lang: 'Idioma',
     btn_settings: 'Configurações',
-    settings_whatsapp_label: 'Número WhatsApp (Ex: 5511999999999)',
+    settings_whatsapp_label: 'Número WhatsApp (Ex: 55 + DDD 2 dígitos + Número)',
+    verify_phone_label: 'Número WhatsApp (Ex: 55 + DDD 2 dígitos + Número)',
+    verify_phone_placeholder: 'Ex: 5511999999999',
 
     // ---- Scale Bar ----
     events_count_zero: 'eventos',
@@ -383,7 +385,9 @@ const TRANSLATIONS = {
     btn_logout_title: 'Logout',
     btn_lang: 'Language',
     btn_settings: 'Settings',
-    settings_whatsapp_label: 'WhatsApp Number (Ex: 5511999999999)',
+    settings_whatsapp_label: 'WhatsApp (Ex: 55 + 2-digits DDD + Number)',
+    verify_phone_label: 'WhatsApp (Ex: 55 + 2-digits DDD + Number)',
+    verify_phone_placeholder: 'Ex: 5511999999999',
 
     // ---- Scale Bar ----
     events_count_zero: 'events',

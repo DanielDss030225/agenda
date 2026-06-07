@@ -310,6 +310,55 @@ select {
 }
 
 
+/* ===== VERIFICATION SCREEN ===== */
+#verification-screen {
+  background: linear-gradient(180deg, #f5f3ff 0%, #ffffff 100%);
+}
+
+.verification-anim-wrap {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.verification-icon-box {
+  width: 80px;
+  height: 80px;
+  background: var(--primary);
+  border-radius: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  z-index: 2;
+  box-shadow: 0 10px 25px rgba(124, 58, 237, 0.3);
+  animation: float 3s ease-in-out infinite;
+}
+
+.verification-icon-box .material-symbols-outlined {
+  font-size: 40px;
+  font-variation-settings: 'FILL' 1;
+}
+
+.verification-ripple {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  background: var(--primary-lt);
+  border-radius: 28px;
+  z-index: 1;
+  animation: verificationPulse 2s ease-out infinite;
+}
+
+@keyframes verificationPulse {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
 /* ===== RECOVERY SCREEN ===== */
 #recovery-area {
   animation: recoverySlidIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;

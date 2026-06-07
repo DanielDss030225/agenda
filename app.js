@@ -81,6 +81,17 @@ function applyMask(id, type) {
     } else if (type === 'time') {
       if (v.length > 4) v = v.slice(0, 4);
       if (v.length > 2) v = v.replace(/^(\d{2})(\d{2}).*/, '$1:$2');
+    } else if (type === 'phone') {
+      v = v.replace(/\D/g, '');
+      // Remove leading zero if they type 031... -> 31...
+      if (v.startsWith('0') && v.length > 1) {
+        v = v.substring(1);
+      }
+      // Remove zeros after 55 (index 2) to ensure 2-digit DDD (55031 -> 5531)
+      if (v.startsWith('550')) {
+        v = '55' + v.substring(3);
+      }
+      if (v.length > 13) v = v.slice(0, 13);
     }
     e.target.value = v;
     if (type === 'date' && id === 'evt-date') updateWorkBadge(v);
@@ -542,7 +553,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
     console.log("User logged in:", user.uid);
     S.currentUser = user.uid;
 
-    // Check if user has scale/sounds in Database
     try {
       const snap = await userRef().once('value');
       const data = snap.val() || {};
@@ -550,30 +560,42 @@ firebase.auth().onAuthStateChanged(async (user) => {
       S.soundsEnabled = data.sounds !== undefined ? data.sounds : true;
       updateSoundIcon();
 
+      const phoneNumber = data.phoneNumber || '';
+      
       // If new user, initialize basic entry
       if (!snap.exists()) {
         await userRef().update({
           email: user.email,
-          displayName: user.displayName,
+          displayName: user.displayName || '',
           createdAt: new Date().toISOString()
         });
       }
+
+      localStorage.setItem('agbizu_session', user.uid);
+
+      // Check for Admin
+      if (user.email === 'maispraticodesenvolvimento@gmail.com') {
+        const btn = document.getElementById('btn-admin-panel');
+        if (btn) {
+          btn.classList.remove('hidden');
+          btn.onclick = () => window.location.href = 'adm.html';
+        }
+      }
+
+      // BLOCKING LOGIC: User MUST have a phone number to use the system
+      if (!phoneNumber) {
+        console.log("Account Verification Required.");
+        showVerificationScreen();
+      } else {
+        S.verifiedPhone = phoneNumber;
+        S.isPhoneVerified = true;
+        initApp();
+      }
+
     } catch (e) {
       console.error("Error fetching user profile:", e);
+      initApp(); // Try to load anyway or show error
     }
-
-    localStorage.setItem('agbizu_session', user.uid);
-
-    // Check for Admin
-    if (user.email === 'maispraticodesenvolvimento@gmail.com') {
-      const btn = document.getElementById('btn-admin-panel');
-      if (btn) {
-        btn.classList.remove('hidden');
-        btn.onclick = () => window.location.href = 'adm.html';
-      }
-    }
-
-    initApp();
   } else {
     console.log("No user session.");
     logout(true); // silent logout
@@ -620,6 +642,8 @@ function initApp() {
     applyMask('trans-date', 'date');
     applyMask('evt-time', 'time');
     applyMask('evt-end-time', 'time');
+    applyMask('settings-phone', 'phone');
+    applyMask('verify-phone', 'phone');
 
     // Inicializa estado do sidebar no Desktop
     if (localStorage.getItem('agbizu_sidebar_collapsed') === 'true' && window.innerWidth >= 900) {
@@ -742,7 +766,7 @@ document.getElementById('login-form').onsubmit = async (e) => {
   }
 };
 
-async function logout(silent = false) {
+window.logout = async function (silent = false) {
   if (!silent) {
     closeModal('modal-logout');
     showLoading('loading_wait');
@@ -762,6 +786,7 @@ async function logout(silent = false) {
     resetAuthUI();
     show('login-screen');
     hide('app-screen');
+    hide('verification-screen');
     if (typeof window.hideAgentFab === 'function') window.hideAgentFab();
     hideLoading();
   } else {
@@ -769,6 +794,7 @@ async function logout(silent = false) {
     resetAuthUI();
     show('login-screen');
     hide('app-screen');
+    hide('verification-screen');
     hideLoading();
   }
 }
@@ -2553,7 +2579,134 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  // ======================== SETTINGS LOGIC ========================
+  // ======================== VERIFICATION SCREEN LOGIC ========================
+  window.showVerificationScreen = function () {
+    hide('login-screen');
+    hide('app-screen');
+    show('verification-screen');
+    if ($('verification-screen')) $('verification-screen').style.display = 'flex';
+    
+    if ($('verify-phone')) {
+      $('verify-phone').value = '';
+      applyMask('verify-phone', 'phone');
+    }
+    if ($('group-verify-code-v2')) $('group-verify-code-v2').classList.add('hidden');
+    if ($('verification-actions')) $('verification-actions').classList.add('hidden');
+    if ($('verify-status')) $('verify-status').classList.add('hidden');
+    
+    hideLoading();
+  };
+
+  window.requestVerificationV2 = async function () {
+    const phone = $('verify-phone').value.trim();
+    const statusEl = $('verify-status');
+    if (!phone || phone.length < 10) {
+      if (statusEl) {
+        statusEl.textContent = "Digite um número com DDD (Ex: 5511999999999)";
+        statusEl.style.color = "#dc2626";
+        statusEl.classList.remove('hidden');
+      }
+      return;
+    }
+
+    showLoading('loading_wait');
+    play('click');
+
+    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    S.pendingVerificationCode = code;
+
+    try {
+      // DUPLICATE CHECK
+      const existingSnap = await db.ref('users').orderByChild('phoneNumber').equalTo(phone).once('value');
+      if (existingSnap.exists()) {
+        const owners = existingSnap.val();
+        const otherOwner = Object.keys(owners).find(uid => uid !== S.currentUser);
+        if (otherOwner) {
+          hideLoading();
+          if (statusEl) {
+            statusEl.textContent = "Este número já está em uso em outra conta.";
+            statusEl.style.color = "#dc2626";
+            statusEl.classList.remove('hidden');
+          }
+          return;
+        }
+      }
+
+      await db.ref('verification_queue').push({
+        userId: S.currentUser,
+        phoneNumber: phone,
+        code: code,
+        timestamp: Date.now()
+      });
+
+      hideLoading();
+      if ($('group-verify-code-v2')) $('group-verify-code-v2').classList.remove('hidden');
+      
+      if (statusEl) {
+        statusEl.textContent = "Código enviado ao WhatsApp!";
+        statusEl.style.color = "#16a34a";
+        statusEl.classList.remove('hidden');
+      }
+    } catch (err) {
+      hideLoading();
+      if (statusEl) {
+        statusEl.textContent = "Erro: " + err.message;
+        statusEl.style.color = "#dc2626";
+        statusEl.classList.remove('hidden');
+      }
+    }
+  };
+
+  window.confirmVerificationV2 = function () {
+    const inputCode = $('verify-code-v2').value.trim();
+    const statusEl = $('verify-status');
+    if (inputCode === S.pendingVerificationCode) {
+      S.isPhoneVerified = true;
+      S.verifiedPhone = $('verify-phone').value.trim();
+      if ($('verification-actions')) $('verification-actions').classList.remove('hidden');
+      if ($('group-verify-code-v2')) $('group-verify-code-v2').classList.add('hidden');
+      if (statusEl) {
+        statusEl.textContent = "WhatsApp validado com sucesso!";
+        statusEl.style.color = "#16a34a";
+        statusEl.classList.remove('hidden');
+      }
+    } else {
+      if (statusEl) {
+        statusEl.textContent = "Código incorreto.";
+        statusEl.style.color = "#dc2626";
+        statusEl.classList.remove('hidden');
+      }
+    }
+  };
+
+  window.saveVerificationV2 = async function () {
+    if (!S.currentUser) return;
+    const phone = S.verifiedPhone;
+
+    if (!phone) {
+      alert("Por favor, valide seu WhatsApp primeiro.");
+      return;
+    }
+
+    showLoading('loading_saving');
+    play('click');
+    try {
+      await userRef().update({
+        phoneNumber: phone
+      });
+      
+      hide('verification-screen');
+      createToast({ title: "Bem-vindo!", message: "Conta verificada com sucesso.", type: "success" });
+      
+      // Reload page to start app cleanly or call initApp
+      window.location.reload(); 
+    } catch (err) {
+      hideLoading();
+      alert("Erro ao salvar: " + err.message);
+    }
+  };
+
+  // Keep old settings logic but update it to use the new redirection if they clear the number
   window.openSettings = function () {
     if (!S.currentUser) return;
     showLoading();
@@ -2578,21 +2731,14 @@ document.addEventListener('DOMContentLoaded', () => {
         $('settings-verify-status').classList.add('hidden');
       }
 
-      // Decidir se mostra o botão Salvar
-      const actions = $('settings-form-actions');
-      if (actions) {
-        if (phoneVal === "") {
-          actions.classList.add('hidden'); // Oculto se vazio (conforme solicitado)
-        } else {
-          actions.classList.remove('hidden'); // Já está verificado no banco
-        }
-        if ($('btn-save-settings')) $('btn-save-settings').disabled = false;
-      }
+      if ($('settings-form-actions')) $('settings-form-actions').classList.remove('hidden');
+      if ($('btn-save-settings')) $('btn-save-settings').disabled = false;
 
       openModal('modal-settings');
     });
   };
 
+  // ======================== MODAL SETTINGS LOGIC (Original) ========================
   window.requestVerification = async function () {
     const phone = $('settings-phone').value.trim();
     const statusEl = $('settings-verify-status');
@@ -2608,12 +2754,26 @@ document.addEventListener('DOMContentLoaded', () => {
     showLoading('loading_wait');
     play('click');
 
-    // Gerar código de 4 dígitos
     const code = Math.floor(1000 + Math.random() * 9000).toString();
     S.pendingVerificationCode = code;
 
     try {
-      // Enviar para a fila que o Bot escuta
+      // DUPLICATE CHECK
+      const existingSnap = await db.ref('users').orderByChild('phoneNumber').equalTo(phone).once('value');
+      if (existingSnap.exists()) {
+        const owners = existingSnap.val();
+        const otherOwner = Object.keys(owners).find(uid => uid !== S.currentUser);
+        if (otherOwner) {
+          hideLoading();
+          if (statusEl) {
+            statusEl.textContent = "Este número já está sendo usado por outro usuário.";
+            statusEl.style.color = "#dc2626";
+            statusEl.classList.remove('hidden');
+          }
+          return;
+        }
+      }
+
       await db.ref('verification_queue').push({
         userId: S.currentUser,
         phoneNumber: phone,
@@ -2625,18 +2785,16 @@ document.addEventListener('DOMContentLoaded', () => {
       if ($('group-settings-verify-code')) $('group-settings-verify-code').classList.remove('hidden');
       if ($('settings-form-actions')) $('settings-form-actions').classList.add('hidden');
 
-      const statusEl = $('settings-verify-status');
       if (statusEl) {
         statusEl.textContent = "Código enviado com sucesso!";
-        statusEl.style.color = "#16a34a"; // Green for success
+        statusEl.style.color = "#16a34a";
         statusEl.classList.remove('hidden');
       }
     } catch (err) {
       hideLoading();
-      const statusEl = $('settings-verify-status');
       if (statusEl) {
         statusEl.textContent = "Erro: " + err.message;
-        statusEl.style.color = "#dc2626"; // Red for error
+        statusEl.style.color = "#dc2626";
         statusEl.classList.remove('hidden');
       }
     }
@@ -2680,7 +2838,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Se o número mudou e não foi validado (exceto se ficou vazio)
     if (phone !== S.verifiedPhone && phone !== "") {
       if (statusEl) {
         statusEl.textContent = "Por favor, valide seu novo número de WhatsApp antes de salvar.";
@@ -2700,14 +2857,16 @@ document.addEventListener('DOMContentLoaded', () => {
       closeModal('modal-settings');
       hideLoading();
       createToast({ title: "Sucesso", message: "Configurações salvas!", type: "success" });
+      
+      // Se limpou o telefone, vai ser expulso pelo observer ou reload
+      if (!phone) window.location.reload();
+
     } catch (err) {
       hideLoading();
       if (statusEl) {
         statusEl.textContent = "Erro ao salvar: " + err.message;
         statusEl.style.color = "#dc2626";
         statusEl.classList.remove('hidden');
-      } else {
-        createToast({ title: "Erro", message: "Erro ao salvar: " + err.message, type: "error" });
       }
     }
   };
