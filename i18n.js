@@ -58,7 +58,7 @@ const TRANSLATIONS = {
     btn_go_home: 'Início (Hoje)',
     btn_new: 'Novo Evento',
     btn_new_title: 'Novo Evento',
-    btn_search_title: 'Pesquisar Eventos',
+    btn_search_title: 'Pesquisar',
     btn_sound_title: 'Sons',
     btn_logout_title: 'Sair',
     btn_lang: 'Idioma',
@@ -166,9 +166,9 @@ const TRANSLATIONS = {
     btn_toggle_finance: 'Finance Bar',
 
     // ---- Search Modal ----
-    search_title: 'Pesquisar Eventos',
+    search_title: 'Pesquisar',
     search_placeholder: 'Buscar por título, data, categoria...',
-    search_empty: 'Digite para pesquisar eventos',
+    search_empty: 'Digite para pesquisar',
     search_no_results: 'Nenhum evento encontrado',
 
     // ---- Logout Modal ----
@@ -380,7 +380,7 @@ const TRANSLATIONS = {
     btn_go_home: 'Home (Today)',
     btn_new: 'New Event',
     btn_new_title: 'New Event',
-    btn_search_title: 'Search Events',
+    btn_search_title: 'Search',
     btn_sound_title: 'Sound',
     btn_logout_title: 'Logout',
     btn_lang: 'Language',
@@ -488,7 +488,7 @@ const TRANSLATIONS = {
     btn_toggle_finance: 'Finance Bar',
 
     // ---- Search Modal ----
-    search_title: 'Search events',
+    search_title: 'Search',
     search_placeholder: 'Search by title, date, category...',
     search_empty: 'Type to search events',
     search_no_results: 'No events found',

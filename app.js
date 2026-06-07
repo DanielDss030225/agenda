@@ -2037,71 +2037,104 @@ function renderSearch(query) {
   const resultsEl = $('search-results');
   resultsEl.innerHTML = '';
 
+  let dedupedFull = [];
+
   if (!q) {
     if (countEl) countEl.style.display = "none";
-    return;
-  }
+    
+    // Pegar todos os itens e ordenar por createdAt para mostrar os 10 mais recentes
+    const allEvents = S.events.map(ev => ({ ...ev, itemType: 'event' }));
+    const allTrans = S.transactions.map(tr => ({ ...tr, itemType: 'transaction' }));
+    const combined = [...allEvents, ...allTrans];
+    
+    // Ordenar por data de criação decrescente
+    combined.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+      const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+      return dateB - dateA;
+    });
 
-  if (countEl) {
-    countEl.style.display = "flex";
-    countEl.style.gap = "5px";
-  }
-
-  const filteredEvents = S.events.filter(ev => {
-    const d = new Date(ev.date + 'T12:00:00');
-    return (
-      ev.title.toLowerCase().includes(q) ||
-      (ev.description || '').toLowerCase().includes(q) ||
-      (ev.category || '').toLowerCase().includes(q) ||
-      d.toLocaleDateString(locale).includes(q)
-    );
-  }).map(ev => ({ ...ev, itemType: 'event' }));
-
-  const filteredTrans = S.transactions.filter(t => {
-    const d = new Date(t.date + 'T12:00:00');
-    return (
-      (t.desc || '').toLowerCase().includes(q) ||
-      (t.type || '').toLowerCase().includes(q) ||
-      d.toLocaleDateString(locale).includes(q)
-    );
-  }).map(t => ({ ...t, itemType: 'transaction' }));
-
-  const filtered = [...filteredEvents, ...filteredTrans].sort((a, b) => a.date.localeCompare(b.date));
-
-  if (!filtered.length) {
-    if (countEl) countEl.innerHTML = `0 <span data-i18n="events_count_zero">${t('events_count_zero')}</span>`;
-    resultsEl.innerHTML = `<div class="no-events">${t('search_no_results')}</div>`;
-    return;
-  }
-
-  // Deduplicar mantendo ordem original
-  const dedupedFull = [];
-  const seenEvent = new Set();
-  const seenTrans = new Set();
-  filtered.forEach(item => {
-    if (item.itemType === 'transaction') {
-      const rootId = item.id;
-      if (!seenTrans.has(rootId)) {
-        seenTrans.add(rootId);
-        dedupedFull.push(item);
+    // Deduplicar para não repetir séries na lista inicial
+    const seenEvent = new Set();
+    const seenTrans = new Set();
+    combined.forEach(item => {
+      if (item.itemType === 'transaction') {
+        if (!seenTrans.has(item.id)) {
+          seenTrans.add(item.id);
+          dedupedFull.push(item);
+        }
+      } else {
+        const rootId = item.parentEventId || item.id;
+        if (!seenEvent.has(rootId)) {
+          seenEvent.add(rootId);
+          dedupedFull.push(item);
+        }
       }
-    } else {
-      const rootId = item.parentEventId || item.id;
-      if (!seenEvent.has(rootId)) {
-        seenEvent.add(rootId);
-        dedupedFull.push(item);
-      }
+    });
+
+    // Limitar aos 10 últimos lançamentos
+    dedupedFull = dedupedFull.slice(0, 10);
+  } else {
+    if (countEl) {
+      countEl.style.display = "flex";
+      countEl.style.gap = "5px";
     }
-  });
+
+    const filteredEvents = S.events.filter(ev => {
+      const d = new Date(ev.date + 'T12:00:00');
+      return (
+        ev.title.toLowerCase().includes(q) ||
+        (ev.description || '').toLowerCase().includes(q) ||
+        (ev.category || '').toLowerCase().includes(q) ||
+        d.toLocaleDateString(locale).includes(q)
+      );
+    }).map(ev => ({ ...ev, itemType: 'event' }));
+
+    const filteredTrans = S.transactions.filter(t => {
+      const d = new Date(t.date + 'T12:00:00');
+      return (
+        (t.desc || '').toLowerCase().includes(q) ||
+        (t.type || '').toLowerCase().includes(q) ||
+        d.toLocaleDateString(locale).includes(q)
+      );
+    }).map(t => ({ ...t, itemType: 'transaction' }));
+
+    // Ordenar por data decrescente na busca para ver ocorrências recentes primeiro
+    const filtered = [...filteredEvents, ...filteredTrans].sort((a, b) => b.date.localeCompare(a.date));
+
+    // Deduplicar
+    const seenEvent = new Set();
+    const seenTrans = new Set();
+    filtered.forEach(item => {
+      if (item.itemType === 'transaction') {
+        const rootId = item.id;
+        if (!seenTrans.has(rootId)) {
+          seenTrans.add(rootId);
+          dedupedFull.push(item);
+        }
+      } else {
+        const rootId = item.parentEventId || item.id;
+        if (!seenEvent.has(rootId)) {
+          seenEvent.add(rootId);
+          dedupedFull.push(item);
+        }
+      }
+    });
+
+    if (!dedupedFull.length) {
+      if (countEl) countEl.innerHTML = `0 <span data-i18n="events_count_zero">${t('events_count_zero')}</span>`;
+      resultsEl.innerHTML = `<div class="no-events">${t('search_no_results')}</div>`;
+      return;
+    }
+
+    if (countEl) {
+      countEl.innerHTML = `${dedupedFull.length} <span data-i18n="events_count_zero">${t('events_count_zero')}</span>`;
+      if (typeof i18n !== 'undefined') i18n.applyToDOM();
+    }
+  }
 
   S.searchState.results = dedupedFull;
   S.searchState.page = 0;
-
-  if (countEl) {
-    countEl.innerHTML = `${dedupedFull.length} <span data-i18n="events_count_zero">${t('events_count_zero')}</span>`;
-    if (typeof i18n !== 'undefined') i18n.applyToDOM();
-  }
-
   renderSearchPage();
 }
 
