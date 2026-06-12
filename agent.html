@@ -181,6 +181,40 @@
       box-shadow: 0 4px 10px rgba(124, 58, 237, 0.15);
     }
 
+    /* AGENT CARD */
+    .agent-card {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 220px;
+    }
+    .agent-card-header {
+      
+      font-size: 1.05rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+      margin-bottom: 4px;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .agent-card-body {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .agent-card-body > div {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.95rem;
+    }
+    .agent-card-body span {
+      width: 20px;
+      text-align: center;
+    }
+
     /* INPUT AREA */
     .input-area {
       background: var(--surface);
@@ -451,7 +485,7 @@
     function addMsg(text, type) {
       const d = document.createElement('div');
       d.className = `msg msg-${type}`;
-      d.textContent = text;
+      d.innerHTML = text;
       chat.appendChild(d);
       chat.scrollTo({ top: chat.scrollHeight, behavior: 'smooth' });
     }
@@ -647,6 +681,48 @@
       // ==========================================
       const isHelp = /\b(como|ajuda|duvida|mudar|alterar|trocar|how|help|change|what can|what do)\b/i.test(q);
 
+      const isExpense = !isHelp && /\b(despesa|gasto|paguei|conta|debito|perdi|expense|paid|cost|spent)\b/i.test(q);
+      const isIncome = !isHelp && /\b(receita|ganhei|recebi|salario|entrada|pix|income|earned|received|salary)\b/i.test(q);
+
+      if (isExpense || isIncome) {
+        const amountMatch = rawText.match(/(\d+(?:[.,]\d{1,2})?)/);
+        const amount = amountMatch ? parseFloat(amountMatch[1].replace(',', '.')) : 0;
+
+        let desc = rawText.replace(/(\d+(?:[.,]\d{1,2})?)/, '').replace(/(lancar|despesa|receita|gasto|ganhei|recebi|salario|paguei|conta|reais|real|debito|entrada|pix|add|expense|income|paid|received|salary|anotar|anote|um|uma)/gi, '').trim();
+        if (!desc) desc = isExpense ? (isEN ? "Expense via Agent" : "Despesa via Agente") : (isEN ? "Income via Agent" : "Receita via Agente");
+
+        const date = toDateStr(targetDate);
+        const newId = Date.now().toString();
+        const payload = {
+          id: newId,
+          desc: desc.charAt(0).toUpperCase() + desc.slice(1),
+          amount: amount,
+          date: date,
+          type: isExpense ? 'expense' : 'income',
+          category: (typeof i18n !== 'undefined' && i18n.lang() === 'en') ? 'General' : 'Geral',
+          createdAt: new Date().toISOString()
+        };
+
+        db.ref(`users/${S.currentUser}/transactions/${newId}`).set(payload);
+
+        const typeIcon = isExpense ? "💸" : "💵";
+        const typeName = isExpense ? (isEN ? "Expense" : "Despesa") : (isEN ? "Income" : "Receita");
+        
+        // Format response nicely
+        const formattedAmount = new Intl.NumberFormat(locale, { style: 'currency', currency: 'BRL' }).format(amount);
+        
+        return `
+          <div class="agent-card">
+            <div class="agent-card-header">${typeIcon} <b>${typeName} ${isEN ? 'Logged' : 'Lançada'}!</b></div>
+            <div class="agent-card-body">
+              <div><span>📝</span> ${payload.desc}</div>
+              <div><span>💰</span> <b>${formattedAmount}</b></div>
+              <div><span>📅</span> ${dateStr}</div>
+            </div>
+          </div>
+        `;
+      }
+
       const isCreateEvent = !isHelp && /\b(agendar|agende|agede|marcar|marque|marca|criar|crie|adicionar|adicione|adiciona|p[oó]e|p[oó]r|botar|bota|anotar|anota|schedule|book|remind|set|add)\b/i.test(q);
       const isListEvents = !isHelp && (q.includes('o que eu tenho') || q.includes('consultar evento') || q.includes('quais eventos') || q.includes('tem evento') || q.includes('eventos marcados') || q.includes('what do i have') || q.includes('list events') || q.includes('show events') || q.includes('my events') || q.includes('any events'));
       const isDeleteEvent = !isHelp && /\b(cancelar|desmarcar|apagar|excluir|deletar|cancel|delete|remove|erase)\b/i.test(q);
@@ -711,13 +787,21 @@
 
 
         // Build response
-        let resposta = isEN
-          ? `Done! I scheduled "${title}" for ${daySuffix}. ✅`
-          : `Tudo certo! Agendei "${title}" para ${daySuffix}. ✅`;
-        if (evTime) resposta += isEN ? `<br>⏰ Time: <b>${evTime}</b>` : `<br>⏰ Horário: <b>${evTime}</b>`;
-        if (evObs) resposta += isEN ? `<br>📝 Note: <i>${evObs}</i>` : `<br>📝 Obs: <i>${evObs}</i>`;
+        const respTitle = isEN ? `Appointment Scheduled!` : `Compromisso Agendado!`;
+        const timeLabel = isEN ? `Time:` : `Horário:`;
+        const obsLabel = isEN ? `Note:` : `Obs:`;
 
-        return resposta;
+        return `
+          <div class="agent-card">
+            <div class="agent-card-header">📅 <b>${respTitle}</b></div>
+            <div class="agent-card-body">
+              <div><span>📌</span> ${title}</div>
+              <div><span>📅</span> ${dateStr}</div>
+              ${evTime ? `<div><span>⏰</span> ${timeLabel} <b>${evTime}</b></div>` : ''}
+              ${evObs ? `<div><span>📝</span> ${obsLabel} <i>${evObs}</i></div>` : ''}
+            </div>
+          </div>
+        `;
       }
 
       if (isListEvents) {
@@ -998,8 +1082,11 @@
         'christmas': 'Christmas with family is the goal! Check your schedule to see if you work.',
         'new year': 'New Year — a time for renewal. Where will you be at midnight?',
         'carnival': 'Street parade or total rest? Carnival is a lively time.',
+        'finance': 'Keep your finances on track! You can log expenses like "Spent 50 on dinner" or income like "Earned 100 today".',
+        'expense': 'To log an expense, just say "Paid 50 for gas" or "Spent 30 on coffee".',
+        'income': 'To log income, say "Received 200 PIX" or "Earned 500 salary".',
+        'money': 'Money well managed is peace of mind. Log your transactions here!',
         'trip': 'Planning a trip? Mark the dates so I know when you\'re away!',
-        'money': 'Tracking your extra income helps at month\'s end. Use event notes!',
         'night shift': 'Night work requires extra rest during the day.',
         'shift': 'On a 12x36 or 24x72 shift? I understand almost all cycles!',
         'cycle': 'Your shift cycle can be manually adjusted if it\'s not Alfa or Bravo.',
@@ -1101,7 +1188,10 @@
         'ano novo': 'Virada de ano é tempo de renovação. Onde você estará na virada?',
         'carnaval': 'Bloco de rua ou descanso total? O Carnaval é uma época animada.',
         'viagem': 'Planejando viajar? Marque as datas para eu não te incomodar com folgas!',
-        'dinheiro': 'Controlar os extras ajuda no fechamento do mês. Use as notas dos eventos!',
+        'finance': 'Mantenha suas finanças em dia! Você pode registrar despesas como "Gastei 50 no jantar" ou receitas como "Recebi 100 hoje".',
+        'despesa': 'Para registrar uma despesa, diga "Paguei 50 de gasolina" ou "Gastei 30 no café".',
+        'receita': 'Para registrar uma receita, diga "Recebi 200 de PIX" ou "Ganhei 500 de salário".',
+        'dinheiro': 'Dinheiro bem gerido é paz de espírito. Registre suas transações aqui!',
         'noturno': 'Trabalho à noite exige um descanso dobrado durante o dia.',
         'plantao': 'Plantão de escala 12x36 ou 24x72? Eu entendo quase todos os ciclos!',
         'ciclo': 'Seu ciclo de escala pode ser ajustado manualmente se não for Alfa ou Bravo.',
@@ -1123,7 +1213,6 @@
         'livro': 'Ler um pouco antes de dormir ajuda a desligar do trabalho.',
         'jogo': 'Games na folga? É uma ótima forma de relaxar a mente.',
         'futebol': 'Vai ter jogo hoje? Marque o horário para não perder o início!',
-        'academia': 'Hoje é dia de perna ou braço? O importante é não faltar!',
         'corrida': 'Correr limpa a alma e melhora o fôlego para o dia a dia.',
         'paz': 'Desejo a você um turno de muita paz e segurança.',
         'sucesso': 'O sucesso vem da constância. Continue se organizando!',
@@ -1231,7 +1320,7 @@
         'amor': 'O amor é o que faz todo o esforço valer a pena no final do dia.',
         'viagem': 'Viajar renova as energias. Onde será sua próxima aventura?',
         'praia': 'O som das ondas é o melhor remédio para o estresse do trabalho.',
-        'montanha': 'O ar puro da montanha limpa os pulmões e a alma.',
+        'montanha': 'O air puro da montanha limpa os pulmões e a alma.',
         'cidade': 'A vida na cidade é corrida, mas sempre há espaço para um momento bizu.',
         'campo': 'A simplicidade do campo ensina muito sobre o ritmo natural das coisas.',
         'sorte': 'Sorte é quando a preparação encontra a oportunidade. Esteja pronto!',
@@ -1334,8 +1423,8 @@
         if (q.includes('notificacao') || q.includes('notification'))
           return isEN ? "Notifications arrive via the browser or PWA app if installed! ⚡" : "As notificações chegam pelo navegador ou pelo app se você instalou a PWA! ⚡";
         return isEN
-          ? "I can help with: adding events, changing your schedule, and checking days off. What would you like to do?"
-          : "Posso te ajudar com: adicionar eventos, mudar escala e consultar folgas. O que quer fazer especificamente?";
+          ? "I can help with: adding events, checking your schedule, logging expenses/income, and checking days off."
+          : "Posso te ajudar com: agendar eventos, mudar escala, lançar despesas/receitas e consultar folgas.";
       }
 
       return isEN

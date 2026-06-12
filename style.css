@@ -63,6 +63,7 @@ select {
   vertical-align: middle;
   line-height: 0;
   user-select: none;
+
 }
 
 /* ===== SCREENS ===== */
@@ -2326,20 +2327,21 @@ select {
   /* Estilo solicitado: Roxo com fundo branco (agora no header) */
   #btn-collapse-sidebar {
     position: absolute;
-    left: -0px;
+    left: 0px;
     /* Fica exatamente na emenda */
-    top: 50%;
-    transform: translateY(-50%);
+    top: 0 !important;
+    transform: none !important;
     z-index: 1000;
 
     background: #ffffff !important;
     color: var(--primary) !important;
-    border: 1px solid var(--border) !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    border: none !important;
+    border-right: 1px solid var(--border) !important;
+    box-shadow: none !important;
 
     border-radius: 0% !important;
-    width: 42px !important;
-    height: 42px !important;
+    width: 60px !important;
+    height: 70px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -2349,8 +2351,8 @@ select {
   }
 
   #btn-collapse-sidebar:hover {
-    transform: translateY(-50%) scale(1.1);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    background: var(--bg) !important;
+    box-shadow: none !important;
   }
 
 
@@ -2596,6 +2598,7 @@ select {
 
 .desktop-only {
   display: none !important;
+
 }
 
 @media (min-width: 900px) {
@@ -3138,7 +3141,7 @@ button {
   color: white !important;
   background: transparent !important;
   border: none !important;
-  font-weight: 600 !important;
+  
 }
 
 .flatpickr-monthDropdown-months option {

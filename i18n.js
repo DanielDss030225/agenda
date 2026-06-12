@@ -161,9 +161,15 @@ const TRANSLATIONS = {
     finance_empty: 'Nenhuma transação encontrada.',
     btn_save_transaction: 'Salvar Transação',
     finance_month_summary: 'Resumo de',
-    finance_title: 'Transações',
     btn_scale: 'Minha Escala',
     btn_toggle_finance: 'Finance Bar',
+    finance_paid: 'Paga',
+    finance_pending: 'Falta Pagar',
+    finance_status_label: 'Status de Pagamento',
+    carry_over_btn_prefix: 'Postergar saldo negativo para ',
+    finance_type_postponed: 'Postergado',
+    finance_postponed_sent: 'Postergação Enviada',
+    finance_deficit_received: 'Déficit Recebido',
 
     // ---- Search Modal ----
     search_title: 'Pesquisar',
@@ -486,6 +492,10 @@ const TRANSLATIONS = {
     finance_title: 'Transactions',
     btn_scale: 'My Scale',
     btn_toggle_finance: 'Finance Bar',
+    finance_paid: 'Paid',
+    finance_pending: 'Pending',
+    finance_status_label: 'Payment Status',
+    carry_over_btn_prefix: 'Launch in',
 
     // ---- Search Modal ----
     search_title: 'Search',

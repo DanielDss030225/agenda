@@ -656,14 +656,16 @@
           </div>
 
           <div class="field-group">
-            <label class="field-label" data-i18n="verify_phone_label">Número WhatsApp (Ex: 55 + DDD 2 dígitos + Número)</label>
+            <label class="field-label" data-i18n="verify_phone_label">Número WhatsApp (Ex: 55 + DDD 2 dígitos +
+              Número)</label>
             <div style="display: flex; gap: 8px;">
-              <input type="tel" id="verify-phone" class="field-input" placeholder="Ex: 5511999999999" data-i18n="verify_phone_placeholder" data-i18n-attr="placeholder" style="flex: 1;">
+              <input type="tel" id="verify-phone" class="field-input" placeholder="Ex: 5511999999999"
+                data-i18n="verify_phone_placeholder" data-i18n-attr="placeholder" style="flex: 1;">
               <button id="btn-request-verify-v2" class="btn btn-outline btn-sm" onclick="requestVerificationV2()">Enviar
                 Código</button>
             </div>
             <p id="verify-status" class="hidden"
-              style="font-size: 0.75rem; color: #16a34a; font-weight: 500; margin-top: 8px; text-align: center;"></p>
+              style="font-size: 0.75rem; color: #16a34a;  margin-top: 8px; text-align: center;"></p>
           </div>
 
           <div id="group-verify-code-v2" class="field-group hidden"
@@ -673,7 +675,7 @@
               dígitos</label>
             <div style="display: flex; gap: 12px; justify-content: center;">
               <input type="text" id="verify-code-v2" class="field-input" placeholder="0000" maxlength="4"
-                style="width: 120px; text-align: center; letter-spacing: 6px; font-weight: bold; font-size: 1.2rem; background: white;">
+                style="width: 120px; text-align: center; letter-spacing: 6px;  font-size: 1.2rem; background: white;">
               <button class="btn btn-primary" onclick="confirmVerificationV2()">Validar</button>
             </div>
           </div>
@@ -965,22 +967,63 @@
               style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 10px 14px; padding-right: 28px; background: var(--surface); border-bottom: 1px solid var(--border);">
               <div
                 style="background: #eef2ff; padding: 8px; border-radius: 12px; text-align: center; border: 1px solid #c7d2fe;">
-                <div style="font-size: 0.9rem; color: #4338ca; text-transform: uppercase; " data-i18n="finance_income">
+                <div style="font-size: 0.75rem; color: #4338ca; text-transform: uppercase; " data-i18n="finance_income">
                   Receitas</div>
-                <div id="glb-total-income" style="font-size: 1.1rem;  color: #1e1b4b; line-height: 1;">
-                  R$ 0,00</div>
+                <div id="glb-total-income" style="font-size: 1.1rem;  color: #1e1b4b; line-height: 1;">R$ 0,00</div>
               </div>
               <div
                 style="background: #fff1f2; padding: 8px; border-radius: 12px; text-align: center; border: 1px solid #fecdd3;">
-                <div style="font-size: 0.9rem; color: #be123c; text-transform: uppercase; "
+                <div style="font-size: 0.75rem; color: #be123c; text-transform: uppercase; "
                   data-i18n="finance_expenses">Despesas</div>
                 <div id="glb-total-expenses" style="font-size: 1.1rem;  color: #4c0519; line-height: 1;">R$ 0,00</div>
               </div>
               <div
                 style="background: #f0fdf4; padding: 8px; border-radius: 12px; text-align: center; border: 1px solid #bbf7d0;">
-                <div style="font-size: 0.9rem; color: #15803d; text-transform: uppercase; " data-i18n="finance_balance">
-                  Saldo</div>
+                <div style="font-size: 0.75rem; color: #15803d; text-transform: uppercase; "
+                  data-i18n="finance_balance">Saldo</div>
                 <div id="glb-total-balance" style="font-size: 1.1rem;  color: #052e16; line-height: 1;">R$ 0,00</div>
+              </div>
+
+              <!-- NOVAS SUB-METRICAS NO GLOBAL -->
+              <div
+                style="background: #f8fafc; padding: 4px; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0; grid-column: span 1; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <div style="font-size: 0.6rem; color: #15803d; text-transform: uppercase; ">Pagas:
+                </div>
+                <div id="glb-total-paid" style="font-size: 0.75rem; color: #052e16; ">R$ 0,00</div>
+              </div>
+
+              <div
+                style="background: #f8fafc; padding: 4px; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0; grid-column: span 2; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <div style="font-size: 0.6rem; color: #b45309; text-transform: uppercase; ">Faltam:
+                </div>
+                <div id="glb-total-pending" style="font-size: 0.75rem; color: #78350f; ">R$ 0,00</div>
+              </div>
+
+              <!-- ESPELHOS INFORMATIVOS (CARDS DE POSTERGAÇÃO) -->
+              <div id="mirrors-wrapper" class="hidden" style="grid-column: span 3; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 4px;">
+                <div id="mirror-postponed-out" class="hidden" style="background: #faf5ff; padding: 6px; border-radius: 10px; border: 1px solid #e9d5ff; display: flex; align-items: center; justify-content: space-between; height: 100%;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="material-symbols-outlined" style="font-size: 16px; color: #6d28d9;">history</span>
+                    <div id="lbl-mirror-out" style="font-size: 0.65rem; color: #6d28d9;  text-transform: uppercase;" data-i18n="finance_postponed_sent">Postergação Enviada</div>
+                  </div>
+                  <div id="val-mirror-out" style="font-size: 0.75rem; color: #4c1d95; ">R$ 0,00</div>
+                </div>
+
+                <div id="mirror-postponed-in" class="hidden" style="background: #fdf4ff; padding: 6px; border-radius: 10px; border: 1px solid #f5d0fe; display: flex; align-items: center; justify-content: space-between; height: 100%;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="material-symbols-outlined" style="font-size: 16px; color: #a21caf;">event_repeat</span>
+                    <div id="lbl-mirror-in" style="font-size: 0.65rem; color: #a21caf;  text-transform: uppercase;" data-i18n="finance_deficit_received">Déficit Recebido</div>
+                  </div>
+                  <div id="val-mirror-in" style="font-size: 0.75rem; color: #701a75; ">R$ 0,00</div>
+                </div>
+              </div>
+              <!-- BOTAO PARA SALDO NEGATIVO -->
+              <div id="carry-over-container" class="hidden" style="grid-column: span 3; padding-top: 4px;">
+                <button id="btn-carry-over" class="btn btn-danger btn-sm"
+                  style="width: 100%; justify-content: center; font-size: 0.75rem; padding: 10px;">
+                  <span class="material-symbols-outlined" style="font-size: 16px;">arrow_forward</span>
+                  <span id="carry-over-text">Postergar saldo negativo para o próximo mês</span>
+                </button>
               </div>
             </div>
           </div>
@@ -1025,11 +1068,42 @@
         </div>
 
 
-        <!-- YEAR VIEW -->
+        <!-- AI AGENT VIEW -->
         <div id="viewAI" class="cal-view">
-          <iframe id="meuIframe" src="agent.html">
-
-          </iframe>
+          <!-- FINANCE GLOBAL SUMMARY FOR AGENT -->
+          <div id="agent-finance-global-summary" class="finance-summary-grid"
+            style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 10px 14px; background: var(--surface); border-bottom: 1px solid var(--border); border-radius: 0px; margin-bottom: 12px; border: 1px solid var(--border);">
+            <div
+              style="background: #eef2ff; padding: 8px; border-radius: 12px; text-align: center; border: 1px solid #c7d2fe;">
+              <div style="font-size: 0.8rem; color: #4338ca; text-transform: uppercase; " data-i18n="finance_income">
+                Receitas</div>
+              <div id="ai-glb-total-income" style="font-size: 1rem;  color: #1e1b4b; line-height: 1;">R$ 0,00</div>
+            </div>
+            <div
+              style="background: #fff1f2; padding: 8px; border-radius: 12px; text-align: center; border: 1px solid #fecdd3;">
+              <div style="font-size: 0.8rem; color: #be123c; text-transform: uppercase; " data-i18n="finance_expenses">
+                Despesas</div>
+              <div id="ai-glb-total-expenses" style="font-size: 1rem;  color: #4c0519; line-height: 1;">R$ 0,00</div>
+            </div>
+            <div
+              style="background: #f0fdf4; padding: 8px; border-radius: 12px; text-align: center; border: 1px solid #bbf7d0;">
+              <div style="font-size: 0.8rem; color: #15803d; text-transform: uppercase; " data-i18n="finance_balance">
+                Saldo</div>
+              <div id="ai-glb-total-balance" style="font-size: 1rem;  color: #052e16; line-height: 1;">R$ 0,00</div>
+            </div>
+            <!-- NOVAS SUB-METRICAS NO AGENTE -->
+            <div
+              style="background: #f8fafc; padding: 4px; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0; grid-column: span 1; display: flex; align-items: center; justify-content: center; gap: 4px;">
+              <div style="font-size: 0.55rem; color: #15803d; text-transform: uppercase; ">Pag:</div>
+              <div id="ai-glb-total-paid" style="font-size: 0.7rem; color: #052e16; ">R$ 0,00</div>
+            </div>
+            <div
+              style="background: #f8fafc; padding: 4px; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0; grid-column: span 2; display: flex; align-items: center; justify-content: center; gap: 4px;">
+              <div style="font-size: 0.55rem; color: #b45309; text-transform: uppercase; ">Falta:</div>
+              <div id="ai-glb-total-pending" style="font-size: 0.7rem; color: #78350f; ">R$ 0,00</div>
+            </div>
+          </div>
+          <iframe id="meuIframe" src="agent.html"></iframe>
         </div>
 
       </main>
@@ -1477,39 +1551,63 @@
       </div>
       <div class="modal-body">
 
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-          <div style="font-size: 0.9rem;  color: var(--text);" id="finance-month-label" data-i18n="finance_month">Resumo
-            do Mês
-          </div>
-          <button id="btn-add-transaction" class="btn btn-primary btn-sm">
-            <span class="material-symbols-outlined" style="font-size: 18px;">add</span>
-            <span data-i18n="finance_add">Novo</span>
-          </button>
-        </div>
         <div class="finance-summary-grid"
           style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px;">
-          <div
-            style="background: #eef2ff; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #c7d2fe;">
-            <div style="font-size: 0.65rem; color: #4338ca; text-transform: uppercase; " data-i18n="finance_income">
-              Receitas</div>
-            <div id="fin-total-income" style="font-size: 1.1rem;  color: #1e1b4b; line-height: 1;">R$
-              0,00</div>
+
+          <div id="fin-filter-income"
+            onclick="window.setFinanceFilter('income')"
+            style="background: #eef2ff; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #c7d2fe; cursor:pointer; transition: box-shadow 0.2s;">
+            <div style="font-size: 0.65rem; color: #4338ca; text-transform: uppercase;" data-i18n="finance_income">Receitas</div>
+            <div id="fin-total-income" style="font-size: 1.1rem; color: #1e1b4b; line-height: 1;">R$ 0,00</div>
           </div>
-          <div
-            style="background: #fff1f2; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #fecdd3;">
-            <div style="font-size: 0.65rem; color: #be123c; text-transform: uppercase; " data-i18n="finance_expenses">
-              Despesas</div>
-            <div id="fin-total-expenses" style="font-size: 1.1rem;  color: #4c0519; line-height: 1;">R$
-              0,00</div>
+
+          <div id="fin-filter-expense"
+            onclick="window.setFinanceFilter('expense')"
+            style="background: #fff1f2; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #fecdd3; cursor:pointer; transition: box-shadow 0.2s;">
+            <div style="font-size: 0.65rem; color: #be123c; text-transform: uppercase;" data-i18n="finance_expenses">Despesas</div>
+            <div id="fin-total-expenses" style="font-size: 1.1rem; color: #4c0519; line-height: 1;">R$ 0,00</div>
           </div>
-          <div
-            style="background: #f0fdf4; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #bbf7d0;">
-            <div style="font-size: 0.65rem; color: #15803d; text-transform: uppercase; " data-i18n="finance_balance">
-              Saldo</div>
-            <div id="finance-list-status" class="hidden"
-              style="font-size: 0.8rem; color: #dc2626; margin-bottom: 8px; text-align: center;"></div>
-            <div id="fin-total-balance" style="font-size: 1.1rem;  color: #052e16; line-height: 1;">R$
-              0,00</div>
+
+          <div id="fin-filter-paid"
+            onclick="window.setFinanceFilter('paid')"
+            style="background: #f0fdf4; padding: 10px; border-radius: 12px; text-align: center; border: 1px solid #bbf7d0; cursor:pointer; transition: box-shadow 0.2s;">
+            <div style="font-size: 0.6rem; color: #15803d; text-transform: uppercase;">Pagas</div>
+            <div id="fin-total-paid" style="font-size: 0.95rem; color: #052e16; line-height: 1;">R$ 0,00</div>
+          </div>
+
+          <div id="fin-filter-pending"
+            onclick="window.setFinanceFilter('pending')"
+            style="background: #fffbeb; padding: 10px; border-radius: 12px; text-align: center; border: 1px solid #fef3c7; cursor:pointer; transition: box-shadow 0.2s;">
+            <div style="font-size: 0.6rem; color: #b45309; text-transform: uppercase;">Pendentes</div>
+            <div id="fin-total-pending" style="font-size: 0.95rem; color: #78350f; line-height: 1;">R$ 0,00</div>
+          </div>
+
+          <!-- ESPELHOS MODAL -->
+          <div id="fin-mirror-out" class="hidden"
+            onclick="window.setFinanceFilter('postponed')"
+            style="background: #faf5ff; padding: 10px; border-radius: 12px; border: 1px solid #e9d5ff; grid-column: span 2; display: flex; align-items: center; justify-content: space-between; cursor:pointer; transition: box-shadow 0.2s;">
+            <div style="display:flex; align-items:center; gap:8px;">
+               <span class="material-symbols-outlined" style="font-size: 20px; color: #6d28d9;">history</span>
+               <div id="lbl-fin-mirror-out" style="font-size: 0.75rem; color: #6d28d9;">Postergação p/ Próximo Mês</div>
+            </div>
+            <div id="fin-val-mirror-out" style="font-size: 0.95rem; color: #4c1d95;">R$ 0,00</div>
+          </div>
+
+          <div id="fin-mirror-in" class="hidden"
+            onclick="window.setFinanceFilter('deficit')"
+            style="background: #fdf4ff; padding: 10px; border-radius: 12px; border: 1px solid #f5d0fe; grid-column: span 2; display: flex; align-items: center; justify-content: space-between; cursor:pointer; transition: box-shadow 0.2s;">
+            <div style="display:flex; align-items:center; gap:8px;">
+               <span class="material-symbols-outlined" style="font-size: 20px; color: #a21caf;">event_repeat</span>
+               <div id="lbl-fin-mirror-in" style="font-size: 0.75rem; color: #a21caf;">Déficit vindo do Mês Anterior</div>
+            </div>
+            <div id="fin-val-mirror-in" style="font-size: 0.95rem; color: #701a75;">R$ 0,00</div>
+          </div>
+
+          <div id="fin-filter-all"
+            onclick="window.setFinanceFilter('all')"
+            style="background: #f8fafc; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #e2e8f0; grid-column: span 2; cursor:pointer; transition: box-shadow 0.2s;">
+            <div style="font-size: 0.65rem; color: #475569; text-transform: uppercase;" data-i18n="finance_balance">Saldo Geral</div>
+            <div id="fin-total-balance" style="font-size: 1.2rem; color: #0f172a; line-height: 1;">R$ 0,00</div>
           </div>
         </div>
 
@@ -1537,16 +1635,18 @@
           <input type="text" id="settings-name" class="field-input">
         </div>
         <div class="field-group">
-          <label class="field-label" data-i18n="settings_whatsapp_label">WhatsApp (Ex: 55 + DDD 2 dígitos + Número)</label>
+          <label class="field-label" data-i18n="settings_whatsapp_label">WhatsApp (Ex: 55 + DDD 2 dígitos +
+            Número)</label>
           <div style="display: flex; gap: 8px;">
-            <input type="tel" id="settings-phone" class="field-input" placeholder="Ex: 5511999999999" data-i18n="verify_phone_placeholder" data-i18n-attr="placeholder" style="flex: 1;">
+            <input type="tel" id="settings-phone" class="field-input" placeholder="Ex: 5511999999999"
+              data-i18n="verify_phone_placeholder" data-i18n-attr="placeholder" style="flex: 1;">
             <button id="btn-request-verify" class="btn btn-outline btn-sm"
               style="white-space: nowrap;">Verificar</button>
           </div>
           <p id="settings-phone-hint" style="font-size: 0.7rem; color: var(--text3); margin-top: 4px;">Utilizado para
             envio de notificações automáticas via WhatsApp.</p>
           <p id="settings-verify-status" class="hidden"
-            style="font-size: 0.7rem; color: #16a34a; font-weight: 500; margin-top: 2px;"></p>
+            style="font-size: 0.7rem; color: #16a34a;  margin-top: 2px;"></p>
         </div>
 
         <div id="group-settings-verify-code" class="field-group hidden"
@@ -1554,7 +1654,7 @@
           <label class="field-label" style="font-size: 0.75rem;">Digite o código enviado ao seu WhatsApp</label>
           <div style="display: flex; gap: 8px;">
             <input type="text" id="settings-verify-code" class="field-input" placeholder="0000" maxlength="4"
-              style="text-align: center; letter-spacing: 4px; font-weight: bold;">
+              style="text-align: center; letter-spacing: 4px; ">
             <button id="btn-confirm-verify" class="btn btn-primary btn-sm">Validar</button>
           </div>
         </div>
@@ -1914,12 +2014,11 @@
         <div style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
           <a href="https://play.google.com/store/apps/details?id=viewgo.ag.bizu.com&pcampaignid=web_share"
             target="_blank" class="btn btn-primary btn-lg" style="text-decoration: none;"
-            onclick="closeModal('modal-install-app'); localStorage.setItem('agbizu_install_dismissed', 'true');">
+            onclick="closeModal('modal-install-app');">
             <span class="material-symbols-outlined">download</span>
             <span data-i18n="btn_download_app">Baixar na Play Store</span>
           </a>
-          <button type="button" class="btn btn-ghost"
-            onclick="closeModal('modal-install-app'); localStorage.setItem('agbizu_install_dismissed', 'true');"
+          <button type="button" class="btn btn-ghost" onclick="closeModal('modal-install-app');"
             data-i18n="btn_later">Mais tarde</button>
         </div>
       </div>

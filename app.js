@@ -561,7 +561,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
       updateSoundIcon();
 
       const phoneNumber = data.phoneNumber || '';
-      
+
       // If new user, initialize basic entry
       if (!snap.exists()) {
         await userRef().update({
@@ -645,11 +645,11 @@ function initApp() {
     applyMask('settings-phone', 'phone');
     applyMask('verify-phone', 'phone');
 
-    // Inicializa estado do sidebar no Desktop
-    if (localStorage.getItem('agbizu_sidebar_collapsed') === 'true' && window.innerWidth >= 900) {
-      document.getElementById('side-menu')?.classList.add('collapsed');
+    // Inicializa estado do sidebar no Desktop (sempre espandido por padrão)
+    if (window.innerWidth >= 900) {
+      document.getElementById('side-menu')?.classList.remove('collapsed');
       const sideBtnIcon = document.querySelector('#btn-collapse-sidebar span');
-      if (sideBtnIcon) sideBtnIcon.style.transform = 'rotate(180deg)';
+      if (sideBtnIcon) sideBtnIcon.style.transform = 'rotate(0deg)';
     }
 
     // Pequeno delay para não sobrepor outras modais iniciais
@@ -1177,6 +1177,7 @@ function updateGlobalFinanceSummary() {
 
   // Para o resumo global, precisamos considerar as recorrentes no mês
   let totalInc = 0, totalExp = 0;
+  let totalPaid = 0, totalPending = 0;
 
   // Opção simplificada: iterar todos os dias do mês
   const daysInMonth = new Date(y, m + 1, 0).getDate();
@@ -1184,19 +1185,164 @@ function updateGlobalFinanceSummary() {
     const d = new Date(y, m, i);
     const trs = getTransactionsForDate(d);
     trs.forEach(t => {
+      const isPaid = (t.overrides && t.overrides[t.occurrenceDate || toDateStr(d)] && t.overrides[t.occurrenceDate || toDateStr(d)].checked !== undefined)
+        ? t.overrides[t.occurrenceDate || toDateStr(d)].checked
+        : !!t.checked;
+
       if (t.isIgnored) return;
-      if (t.type === 'income') totalInc += t.amount;
-      else totalExp += t.amount;
+      if (t.type === 'income') {
+        totalInc += t.amount;
+      } else if (t.type === 'expense') {
+        totalExp += t.amount;
+        if (isPaid) totalPaid += t.amount;
+        else totalPending += t.amount;
+      } else if (t.type === 'postponed') {
+        // Atua reduzindo o total de despesas que PRECISAM ser pagas NESTE mês
+        totalExp -= t.amount;
+      }
     });
   }
 
   const incomeEl = $('glb-total-income');
   const expenseEl = $('glb-total-expenses');
   const balanceEl = $('glb-total-balance');
+  const paidEl = $('glb-total-paid');
+  const pendingEl = $('glb-total-pending');
 
   if (incomeEl) incomeEl.textContent = formatVal(totalInc);
   if (expenseEl) expenseEl.textContent = formatVal(totalExp);
   if (balanceEl) balanceEl.textContent = formatVal(totalInc - totalExp);
+  if (paidEl) paidEl.textContent = formatVal(totalPaid);
+  if (pendingEl) pendingEl.textContent = formatVal(totalPending);
+
+  // Calcula valores p/ espelhos (Somente visual, sem afetar cálculos core)
+  let mirrorOut = 0, mirrorIn = 0;
+  const trsAll = [];
+  for (let i = 1; i <= daysInMonth; i++) {
+    getTransactionsForDate(new Date(y, m, i)).forEach(t => {
+      if (t.isIgnored) return;
+      if (t.type === 'postponed') mirrorOut += t.amount;
+      if (t.type === 'expense' && t.desc && t.desc.includes('Déficit')) mirrorIn += t.amount;
+    });
+  }
+
+  const glbMIn = $('mirror-postponed-in');
+  const glbMOut = $('mirror-postponed-out');
+  const glbMWrap = $('mirrors-wrapper');
+  const t = (k) => typeof i18n !== 'undefined' ? i18n.t(k) : k;
+
+  if (glbMWrap) {
+    if (mirrorIn > 0 || mirrorOut > 0) glbMWrap.classList.remove('hidden');
+    else glbMWrap.classList.add('hidden');
+  }
+
+  if (glbMIn) {
+    if (mirrorIn > 0) {
+      glbMIn.classList.remove('hidden');
+      $('val-mirror-in').textContent = formatVal(mirrorIn);
+      if ($('lbl-mirror-in')) $('lbl-mirror-in').textContent = t('finance_deficit_received');
+    } else glbMIn.classList.add('hidden');
+  }
+  if (glbMOut) {
+    if (mirrorOut > 0) {
+      glbMOut.classList.remove('hidden');
+      $('val-mirror-out').textContent = formatVal(mirrorOut);
+      if ($('lbl-mirror-out')) $('lbl-mirror-out').textContent = t('finance_postponed_sent');
+    } else glbMOut.classList.add('hidden');
+  }
+
+  // Também atualiza o resumo do Agente
+  const aiIncEl = $('ai-glb-total-income');
+  const aiExpEl = $('ai-glb-total-expenses');
+  const aiBalEl = $('ai-glb-total-balance');
+  const aiPaidEl = $('ai-glb-total-paid');
+  const aiPendingEl = $('ai-glb-total-pending');
+
+  if (aiIncEl) aiIncEl.textContent = formatVal(totalInc);
+  if (aiExpEl) aiExpEl.textContent = formatVal(totalExp);
+  if (aiBalEl) aiBalEl.textContent = formatVal(totalInc - totalExp);
+  if (aiPaidEl) aiPaidEl.textContent = formatVal(totalPaid);
+  if (aiPendingEl) aiPendingEl.textContent = formatVal(totalPending);
+
+  // Helper para 5º dia útil
+  function getFifthWorkingDay(year, month) {
+    let count = 0;
+    let day = 1;
+    while (count < 5) {
+      let d = new Date(year, month, day);
+      let dayOfWeek = d.getDay(); // 0: Sun, 6: Sat
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        count++;
+      }
+      if (count < 5) day++;
+    }
+    return new Date(year, month, day);
+  }
+
+  // LOGICA PARA SALDO NEGATIVO (CARRY OVER)
+  const balance = totalInc - totalExp;
+  const carryOverContainer = $('carry-over-container');
+  const carryOverText = $('carry-over-text');
+
+  if (balance < 0) {
+    if (carryOverContainer) carryOverContainer.classList.remove('hidden');
+    if (carryOverText) {
+      const nextMonthDate = new Date(y, m + 1, 1);
+      const locale = typeof i18n !== 'undefined' ? i18n.t('locale') : 'pt-BR';
+      const nextMonthName = nextMonthDate.toLocaleDateString(locale, { month: 'long' });
+      carryOverText.textContent = `${typeof i18n !== 'undefined' ? i18n.t('carry_over_btn_prefix') || 'Postergar saldo negativo para ' : 'Postergar saldo negativo para '} ${nextMonthName}`;
+
+      // Armazena valor absoluto do saldo para o botão
+      $('btn-carry-over').onclick = async (e) => {
+        if (e) e.stopPropagation();
+        const absValue = Math.abs(balance);
+        const currentMonthName = new Date(y, m, 1).toLocaleDateString(locale, { month: 'long' });
+        const lastDayOfMonth = new Date(y, m + 1, 0); // Último dia do mês atual
+
+        play('click');
+        showLoading('Aguarde...');
+
+        // 1. Lança a entrada "Postergado" no dia 30/ultimo do mês atual para zerar o saldo
+        const postponedId = 'post-' + Date.now();
+        const rollId = 'roll-' + (Date.now() + 1);
+
+        const postponedData = {
+          id: postponedId,
+          type: 'postponed',
+          desc: `Postergação de Déficit para ${nextMonthName}`,
+          amount: absValue,
+          date: toDateStr(lastDayOfMonth),
+          createdAt: new Date().toISOString(),
+          linkedId: rollId // Link para desfazer
+        };
+        await userRef(`transactions/${postponedId}`).set(postponedData);
+
+        // 2. Lança a despesa no 5º dia útil do próximo mês
+        const nextMonthYear = nextMonthDate.getFullYear();
+        const nextMonthMon = nextMonthDate.getMonth();
+        const fifthWorkingDay = getFifthWorkingDay(nextMonthYear, nextMonthMon);
+
+        const rollData = {
+          id: rollId,
+          type: 'expense',
+          desc: `Déficit de ${currentMonthName}`,
+          amount: absValue,
+          date: toDateStr(fifthWorkingDay),
+          createdAt: new Date().toISOString(),
+          linkedId: postponedId // Link para desfazer bi-direcional
+        };
+        await userRef(`transactions/${rollId}`).set(rollData);
+
+        hideLoading();
+        notify(`Saldo de ${formatVal(absValue)} postergado para ${nextMonthName}!`);
+
+        // Força atualização total
+        setTimeout(() => refreshCalendar(), 500);
+      };
+    }
+  } else {
+    if (carryOverContainer) carryOverContainer.classList.add('hidden');
+  }
 
   // Também atualiza o modal (caso esteja aberto)
   const finIncEl = $('fin-total-income');
@@ -1266,7 +1412,7 @@ function initMonthSwiper(year) {
           type: 'finance',
           title: t.desc,
           amount: t.amount,
-          color: t.type === 'income' ? '#16a34a' : '#dc2626',
+          color: (t.type === 'postponed' || (t.desc && t.desc.includes('Déficit'))) ? '#6d28d9' : (t.type === 'income' ? '#16a34a' : '#dc2626'),
           completed: !!t.checked
         }))
       ];
@@ -1321,9 +1467,12 @@ function renderYearView() {
       const d = new Date(year, m, day);
       const trs = getTransactionsForDate(d);
       trs.forEach(tr => {
-        if (tr.isIgnored) return;
+        if (tr.isIgnored || tr.type === 'postponed') return;
+        // Ignora também o lançamento de déficit no mês seguinte para não duplicar no anual
+        if (tr.type === 'expense' && tr.desc && tr.desc.includes('Déficit')) return;
+
         if (tr.type === 'income') mIncome += tr.amount;
-        else mExpense += tr.amount;
+        else if (tr.type === 'expense') mExpense += tr.amount;
       });
     }
 
@@ -1368,7 +1517,7 @@ function renderYearView() {
         <div class="year-chart-container">
           ${chartHtml}
         </div>
-           <div class="year-summary-cards" style="margin-top: 20px;">
+        <div class="year-summary-cards" style="margin-top: 20px;">
         <div class="year-summary-card income">
           <div class="label">${t('finance_income')}</div>
           <div class="value" style="font-size: 1.1rem;  line-height: 1;">${formatVal(annualIncome)}</div>
@@ -1476,7 +1625,7 @@ function buildEventItem(ev, withActions = true, showDate = false, contextDate = 
   wrap.innerHTML = `
     <div class="event-stripe" style="background:${catColor(ev.category)}"></div>
     <div style="display:flex; align-items:center; padding-left: 8px;">
-      <button class="btn btn-ghost btn-icon-sm" onclick="window.toggleEventStatus('${ev.id}', event, '${ev.occurrenceDate || ev.date}')" style="color: ${isCompleted ? 'var(--primary)' : 'var(--text3)'}; padding: 0; width: 32px; height: 32px; flex-shrink: 0;">
+      <button class="btn btn-ghost btn-icon-sm" onclick="event.stopPropagation(); window.toggleEventStatus('${ev.id}', event, '${ev.occurrenceDate || ev.date}')" style="color: ${isCompleted ? 'var(--primary)' : 'var(--text3)'}; padding: 0; width: 32px; height: 32px; flex-shrink: 0;">
         <span class="material-symbols-outlined" style="font-size:24px; font-variation-settings: 'FILL' ${isCompleted ? 1 : 0}">${isCompleted ? 'check_circle' : 'radio_button_unchecked'}</span>
       </button>
     </div>
@@ -1543,15 +1692,13 @@ function buildFinanceSearchItem(t, showDate = false) {
 
   div.innerHTML = `
     <div style="display:flex; align-items:center; gap:12px;">
-      <button class="btn btn-ghost btn-icon-sm" onclick="event.stopPropagation(); window.toggleTransactionStatus('${t.id}', event, '${t.occurrenceDate || t.date}')" style="color: ${isChecked ? 'var(--primary)' : 'var(--text3)'}; padding: 0; width: 28px; height: 28px; display: none;">
-        <span class="material-symbols-outlined" style="font-size:22px; font-variation-settings: 'FILL' ${isChecked ? 1 : 0}">${isChecked ? 'check_circle' : 'radio_button_unchecked'}</span>
-      </button>
       <div style="background:${t.type === 'income' ? '#dcfce7' : '#fee2e2'}; color:${t.type === 'income' ? '#166534' : '#991b1b'}; width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center;">
         <span class="material-symbols-outlined" style="font-size:18px;">${t.type === 'income' ? 'trending_up' : 'trending_down'}</span>
       </div>
       <div>
         ${dateHtml}
-        <div>${truncate(t.desc)} ${t.installments > 0 ? `<span style="font-size:0.65rem; color:var(--text3);  margin-left:4px;">(${t.currentInstallment}/${t.installments})</span>` : ''}</div>
+        <div style="${isChecked ? 'text-decoration: line-through; color: var(--text3);' : ''}">${truncate(t.desc)} ${t.installments > 0 ? `<span style="font-size:0.65rem; color:var(--text3);  margin-left:4px;">(${t.currentInstallment}/${t.installments})</span>` : ''}</div>
+        ${isChecked ? `<div style="font-size:0.6rem; color:#16a34a;  text-transform: uppercase; margin-top: 2px; display: flex; align-items: center; gap: 4px;"><span class="material-symbols-outlined" style="font-size: 10px; font-variation-settings: 'FILL' 1;">check_circle</span> ${typeof i18n !== 'undefined' ? i18n.t('finance_paid') : 'Paga'}</div>` : `<div style="font-size:0.6rem; color:#dc2626;  text-transform: uppercase; margin-top: 2px; display: flex; align-items: center; gap: 4px;"><span class="material-symbols-outlined" style="font-size: 10px;">pending</span> ${typeof i18n !== 'undefined' ? i18n.t('finance_pending') : 'Falta Pagar'}</div>`}
       </div>
     </div>
     <div style="display:flex; align-items:center; gap:12px;">
@@ -1601,12 +1748,18 @@ function openDayModal(d) {
   const trList = $('day-finance-list');
   trList.innerHTML = trs.length ? '' : `<p class="empty-state">${typeof i18n !== 'undefined' ? i18n.t('finance_empty') : 'Sem finanças'}</p>`;
   trs.forEach(t => {
-    const isChecked = !!t.checked;
-    const color = t.type === 'income' ? '#16a34a' : '#dc2626';
-    const bgColor = t.type === 'income' ? '#dcfce7' : '#fee2e2';
+    const isChecked = (t.overrides && t.overrides[t.occurrenceDate || toDateStr(d)] && t.overrides[t.occurrenceDate || toDateStr(d)].checked !== undefined)
+      ? t.overrides[t.occurrenceDate || toDateStr(d)].checked
+      : !!t.checked;
+    const isIgnored = !!t.isIgnored;
+    const isPostponedCredit = t.type === 'postponed';
+    const isDeficitExpense = t.type === 'expense' && t.desc && t.desc.includes('Déficit');
+    const isPostponed = isPostponedCredit; // só o crédito bloqueia toggle e edição
+    const color = (isPostponedCredit || isDeficitExpense) ? '#6d28d9' : (t.type === 'income' ? '#16a34a' : '#dc2626');
+    const bgColor = (isPostponedCredit || isDeficitExpense) ? '#f5f3ff' : (t.type === 'income' ? '#dcfce7' : '#fee2e2');
 
     const div = document.createElement('div');
-    div.className = 'finance-item' + (isChecked ? ' checked' : '');
+    div.className = 'finance-item' + (isChecked ? ' checked' : '') + (isIgnored ? ' ignored' : '');
     div.style = `
       display:flex; 
       align-items:center; 
@@ -1617,32 +1770,39 @@ function openDayModal(d) {
       border-radius: 16px; 
       margin-bottom: 8px; 
       cursor:pointer; 
-      opacity: ${t.isIgnored ? '0.4' : (isChecked ? '0.7' : '1')}; 
+      opacity: ${isIgnored ? '0.4' : (isChecked ? '0.7' : '1')}; 
       box-shadow: 0 2px 8px rgba(0,0,0,0.02);
       transition: all 0.2s;
     `;
 
     div.innerHTML = `
-      <button class="btn btn-ghost btn-icon-sm" onclick="window.toggleTransactionStatus('${t.id}', event, '${t.occurrenceDate}')" style="color: ${isChecked ? 'var(--primary)' : 'var(--text3)'}; padding: 0; width: 32px; height: 32px; flex-shrink: 0;">
-        <span class="material-symbols-outlined" style="font-size:24px; font-variation-settings: 'FILL' ${isChecked ? 1 : 0}">${isChecked ? 'check_circle' : 'radio_button_unchecked'}</span>
-      </button>
-      
-      <div style="background:${bgColor}; color:${color}; width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink: 0;">
-        <span class="material-symbols-outlined" style="font-size:20px;">${t.type === 'income' ? 'trending_up' : 'trending_down'}</span>
+      <div style="display:flex; align-items:center; gap:12px;">
+        ${(t.type === 'expense' && !isIgnored && !isPostponedCredit) ? `
+        <button class="btn btn-ghost btn-icon-sm" onclick="event.stopPropagation(); window.toggleTransactionStatus('${t.id}', event, '${t.occurrenceDate || toDateStr(d)}')" style="color: ${isChecked ? '#16a34a' : 'var(--text3)'}; padding: 0; width: 28px; height: 28px; flex-shrink:0;">
+          <span class="material-symbols-outlined" style="font-size:24px; font-variation-settings: 'FILL' ${isChecked ? 1 : 0}">${isChecked ? 'check_circle' : 'radio_button_unchecked'}</span>
+        </button>
+        ` : `
+        <div style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; color: var(--text3); opacity: 0.5; flex-shrink:0;">
+          <span class="material-symbols-outlined" style="font-size:22px;">${isPostponedCredit ? 'history' : 'do_not_disturb_on'}</span>
+        </div>
+        `}
+        <div style="background:${bgColor}; color:${color}; width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink: 0;">
+          <span class="material-symbols-outlined" style="font-size:20px;">${(isPostponedCredit || isDeficitExpense) ? 'event_repeat' : (t.type === 'income' ? 'trending_up' : 'trending_down')}</span>
+        </div>
       </div>
       
       <div style="flex:1; overflow: hidden;">
-        <div >
-          ${truncate(t.desc)} ${t.installments > 0 ? `<span style="font-size:0.75rem; color:var(--text3);  margin-left:4px;">(${t.currentInstallment}/${t.installments})</span>` : ''}
+        <div style="${(isChecked || isIgnored) ? 'text-decoration: line-through; color: var(--text3);' : ''}">
+          ${truncate(t.desc)} ${t.installments > 0 ? `<span style="font-size:0.75rem; color:var(--text3); margin-left:4px;">(${t.currentInstallment}/${t.installments})</span>` : ''}
         </div>
-        <div style="font-size:0.75rem; color:var(--text3); ">${t.type === 'income' ? (typeof i18n !== 'undefined' ? i18n.t('finance_type_income') : 'Receita') : (typeof i18n !== 'undefined' ? i18n.t('finance_type_expense') : 'Despesa')}${t.createdAt ? ` • ${typeof i18n !== 'undefined' ? i18n.t('launched_on') : 'Lançado em'} ${new Date(t.createdAt).toLocaleDateString(typeof i18n !== 'undefined' ? i18n.t('locale') : 'pt-BR')}` : ''}</div>
+        ${(t.type === 'expense' && !isIgnored && !isPostponedCredit) ? (isChecked ? `<div style="font-size:0.6rem; color:#16a34a; text-transform: uppercase; margin-top: 2px; display: flex; align-items: center; gap: 4px;"><span class="material-symbols-outlined" style="font-size: 10px; font-variation-settings: 'FILL' 1;">check_circle</span> ${typeof i18n !== 'undefined' ? i18n.t('finance_paid') : 'Paga'}</div>` : `<div style="font-size:0.6rem; color:#6d28d9; text-transform: uppercase; margin-top: 2px; display: flex; align-items: center; gap: 4px;"><span class="material-symbols-outlined" style="font-size: 10px;">pending</span> ${isDeficitExpense ? (typeof i18n !== 'undefined' ? i18n.t('finance_deficit_received') : 'Déficit Recebido') : (typeof i18n !== 'undefined' ? i18n.t('finance_pending') : 'Falta Pagar')}</div>`) : `<div style="font-size:0.75rem; color:${isPostponedCredit ? '#6d28d9' : 'var(--text3)'};">${isPostponedCredit ? (typeof i18n !== 'undefined' ? i18n.t('finance_type_postponed') : 'Postergado') : (t.type === 'income' ? (typeof i18n !== 'undefined' ? i18n.t('finance_type_income') : 'Receita') : (typeof i18n !== 'undefined' ? i18n.t('finance_type_expense') : 'Despesa'))}</div>`}
       </div>
       
       <div style="text-align:right; flex-shrink: 0;">
-        <div style="font-size:1rem; color:${color}; text-decoration: ${(isChecked || t.isIgnored) ? 'line-through' : 'none'};">
+        <div style="font-size:1rem; color:${color}; text-decoration: ${(isChecked || isIgnored) ? 'line-through' : 'none'};">
           ${t.type === 'income' ? '+' : '-'} ${formatVal(t.amount)}
         </div>
-        ${t.isIgnored ? `
+        ${isIgnored ? `
           <div style="display:flex; align-items:center; gap:4px; color:var(--danger); font-size:0.7rem; margin-top:4px; justify-content: flex-end;">
             <span class="material-symbols-outlined" style="font-size:14px;">event_busy</span>
             <span data-i18n="ignored_instance_badge">${typeof i18n !== 'undefined' ? i18n.t('ignored_instance_badge') : 'DESCONSIDERADO'}</span>
@@ -2041,12 +2201,12 @@ function renderSearch(query) {
 
   if (!q) {
     if (countEl) countEl.style.display = "none";
-    
+
     // Pegar todos os itens e ordenar por createdAt para mostrar os 10 mais recentes
     const allEvents = S.events.map(ev => ({ ...ev, itemType: 'event' }));
     const allTrans = S.transactions.map(tr => ({ ...tr, itemType: 'transaction' }));
     const combined = [...allEvents, ...allTrans];
-    
+
     // Ordenar por data de criação decrescente
     combined.sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
@@ -2412,6 +2572,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   window.updateGlobalFinanceVisibility = function () {
     const container = $('finance-global-summary-container');
+    const aiContainer = $('agent-finance-global-summary');
     const iconVisible = $('icon-finance-visible');
     const iconHidden = $('icon-finance-hidden');
     const shortVisible = $('shortcut-icon-finance-on');
@@ -2419,12 +2580,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (S.showGlobalFinance) {
       if (container) container.style.display = 'block';
+      if (aiContainer) aiContainer.style.display = 'grid';
       if (iconVisible) iconVisible.classList.remove('hidden');
       if (iconHidden) iconHidden.classList.add('hidden');
       if (shortVisible) shortVisible.classList.remove('hidden');
       if (shortHidden) shortHidden.classList.add('hidden');
     } else {
       if (container) container.style.display = 'none';
+      if (aiContainer) aiContainer.style.display = 'none';
       if (iconVisible) iconVisible.classList.add('hidden');
       if (iconHidden) iconHidden.classList.remove('hidden');
       if (shortVisible) shortVisible.classList.add('hidden');
@@ -2618,7 +2781,7 @@ document.addEventListener('DOMContentLoaded', () => {
     hide('app-screen');
     show('verification-screen');
     if ($('verification-screen')) $('verification-screen').style.display = 'flex';
-    
+
     if ($('verify-phone')) {
       $('verify-phone').value = '';
       applyMask('verify-phone', 'phone');
@@ -2626,7 +2789,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if ($('group-verify-code-v2')) $('group-verify-code-v2').classList.add('hidden');
     if ($('verification-actions')) $('verification-actions').classList.add('hidden');
     if ($('verify-status')) $('verify-status').classList.add('hidden');
-    
+
     hideLoading();
   };
 
@@ -2674,7 +2837,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       hideLoading();
       if ($('group-verify-code-v2')) $('group-verify-code-v2').classList.remove('hidden');
-      
+
       if (statusEl) {
         statusEl.textContent = "Código enviado ao WhatsApp!";
         statusEl.style.color = "#16a34a";
@@ -2727,12 +2890,12 @@ document.addEventListener('DOMContentLoaded', () => {
       await userRef().update({
         phoneNumber: phone
       });
-      
+
       hide('verification-screen');
       createToast({ title: "Bem-vindo!", message: "Conta verificada com sucesso.", type: "success" });
-      
+
       // Reload page to start app cleanly or call initApp
-      window.location.reload(); 
+      window.location.reload();
     } catch (err) {
       hideLoading();
       alert("Erro ao salvar: " + err.message);
@@ -2890,7 +3053,7 @@ document.addEventListener('DOMContentLoaded', () => {
       closeModal('modal-settings');
       hideLoading();
       createToast({ title: "Sucesso", message: "Configurações salvas!", type: "success" });
-      
+
       // Se limpou o telefone, vai ser expulso pelo observer ou reload
       if (!phone) window.location.reload();
 
@@ -3041,6 +3204,7 @@ function updateFinanceUI() {
   }
 
   let totalInc = 0, totalExp = 0;
+  let totalPaid = 0, totalPending = 0;
   const daysInMonth = new Date(y, m + 1, 0).getDate();
   const allForMonth = [];
 
@@ -3048,9 +3212,20 @@ function updateFinanceUI() {
     const d = new Date(y, m, i);
     const trs = getTransactionsForDate(d);
     trs.forEach(t => {
+      const isPaid = (t.overrides && t.overrides[t.occurrenceDate || toDateStr(d)] && t.overrides[t.occurrenceDate || toDateStr(d)].checked !== undefined)
+        ? t.overrides[t.occurrenceDate || toDateStr(d)].checked
+        : !!t.checked;
+
       if (!t.isIgnored) {
-        if (t.type === 'income') totalInc += t.amount;
-        else totalExp += t.amount;
+        if (t.type === 'income') {
+          totalInc += t.amount;
+        } else if (t.type === 'expense') {
+          totalExp += t.amount;
+          if (isPaid) totalPaid += t.amount;
+          else totalPending += t.amount;
+        } else if (t.type === 'postponed') {
+          totalExp -= t.amount; // Reduz o total de despesas a considerar
+        }
       }
       if (!allForMonth.some(x => x.id === t.id && x.occurrenceDate === t.occurrenceDate)) {
         allForMonth.push(t);
@@ -3061,15 +3236,49 @@ function updateFinanceUI() {
   const finIncEl = $('fin-total-income');
   const finExpEl = $('fin-total-expenses');
   const finBalEl = $('fin-total-balance');
+  const finPaidEl = $('fin-total-paid');
+  const finPendingEl = $('fin-total-pending');
 
   if (finIncEl) finIncEl.textContent = formatVal(totalInc);
   if (finExpEl) finExpEl.textContent = formatVal(totalExp);
   if (finBalEl) finBalEl.textContent = formatVal(totalInc - totalExp);
+  if (finPaidEl) finPaidEl.textContent = formatVal(totalPaid);
+  if (finPendingEl) finPendingEl.textContent = formatVal(totalPending);
+
+  // Espelhos no Modal
+  let mOut = 0, mIn = 0;
+  allForMonth.forEach(t => {
+    if (t.isIgnored) return;
+    if (t.type === 'postponed') mOut += t.amount;
+    if (t.type === 'expense' && t.desc && t.desc.includes('Déficit')) mIn += t.amount;
+  });
+
+  const fMOut = $('fin-mirror-out');
+  const fMIn = $('fin-mirror-in');
+  const tFin = (k) => typeof i18n !== 'undefined' ? i18n.t(k) : k;
+
+  if (fMOut) {
+    if (mOut > 0) {
+      fMOut.classList.remove('hidden');
+      $('fin-val-mirror-out').textContent = formatVal(mOut);
+      if ($('lbl-fin-mirror-out')) $('lbl-fin-mirror-out').textContent = tFin('finance_postponed_sent');
+    } else fMOut.classList.add('hidden');
+  }
+  if (fMIn) {
+    if (mIn > 0) {
+      fMIn.classList.remove('hidden');
+      $('fin-val-mirror-in').textContent = formatVal(mIn);
+      if ($('lbl-fin-mirror-in')) $('lbl-fin-mirror-in').textContent = tFin('finance_deficit_received');
+    } else fMIn.classList.add('hidden');
+  }
 
   renderFinanceList(allForMonth);
 }
 
 function openFinances() {
+  // Resetar filtro ao abrir o modal
+  _financeFilter = 'all';
+  Object.values(FILTER_CARD_IDS).forEach(id => { const el = $(id); if (el) el.style.boxShadow = 'none'; });
   updateFinanceUI();
   openModal('modal-finances');
   trackAction('view_finances');
@@ -3081,36 +3290,96 @@ function formatVal(v) {
   return v.toLocaleString(locale, { style: 'currency', currency: cur });
 }
 
+// ── Finance List Filter ─────────────────────────────────────────────────────
+let _financeFilter = 'all';
+let _financeListAll = [];
+
+const FILTER_RING = {
+  income:    '0 0 0 3px #818cf8',
+  expense:   '0 0 0 3px #fb7185',
+  paid:      '0 0 0 3px #4ade80',
+  pending:   '0 0 0 3px #fcd34d',
+  postponed: '0 0 0 3px #a78bfa',
+  deficit:   '0 0 0 3px #e879f9',
+  all:       'none',
+};
+
+const FILTER_CARD_IDS = {
+  income: 'fin-filter-income', expense: 'fin-filter-expense',
+  paid: 'fin-filter-paid',   pending: 'fin-filter-pending',
+  postponed: 'fin-mirror-out', deficit: 'fin-mirror-in',
+  all: 'fin-filter-all',
+};
+
+window.setFinanceFilter = function (f) {
+  // toggle off if same
+  if (_financeFilter === f) f = 'all';
+  _financeFilter = f;
+
+  // update ring on all cards
+  Object.entries(FILTER_CARD_IDS).forEach(([key, id]) => {
+    const el = $(id);
+    if (el) el.style.boxShadow = (key === f) ? FILTER_RING[key] : 'none';
+  });
+
+  renderFinanceList(_financeListAll);
+};
+
 function renderFinanceList(list) {
+  _financeListAll = list; // guardar para re-filtragem
+
+  // Aplicar filtro ativo
+  let filtered = list;
+  if (_financeFilter === 'income')    filtered = list.filter(t => t.type === 'income');
+  else if (_financeFilter === 'expense')  filtered = list.filter(t => t.type === 'expense' && !(t.desc && t.desc.includes('Déficit')));
+  else if (_financeFilter === 'paid')     filtered = list.filter(t => t.type === 'expense' && !!t.checked);
+  else if (_financeFilter === 'pending')  filtered = list.filter(t => t.type === 'expense' && !t.checked);
+  else if (_financeFilter === 'postponed') filtered = list.filter(t => t.type === 'postponed');
+  else if (_financeFilter === 'deficit')  filtered = list.filter(t => t.type === 'expense' && t.desc && t.desc.includes('Déficit'));
+
   const container = $('finance-list');
   container.innerHTML = '';
-  if (list.length === 0) {
+  if (filtered.length === 0) {
     container.innerHTML = `<p style="text-align:center; opacity:0.5; margin-top:20px;" data-i18n="finance_empty">${typeof i18n !== 'undefined' ? i18n.t('finance_empty') : 'Sem transações'}</p>`;
     return;
   }
 
-  list.sort((a, b) => new Date(a.occurrenceDate || a.date) - new Date(b.occurrenceDate || b.date)).forEach(t => {
+  filtered.sort((a, b) => new Date(a.occurrenceDate || a.date) - new Date(b.occurrenceDate || b.date)).forEach(t => {
     const isChecked = !!t.checked;
     const isIgnored = !!t.isIgnored;
+    // Apenas o crédito de postergação (type=postponed) é não-interativo visualmente como roxo
+    // O débito de déficit (type=expense, desc='Déficit...') é tratado como despesa normal
+    const isPostponedCredit = t.type === 'postponed';
+    const isDeficitExpense = t.type === 'expense' && t.desc && t.desc.includes('Déficit');
+    const isPostponed = isPostponedCredit; // só o crédito bloqueia toggle
+    const color = (isPostponedCredit || isDeficitExpense) ? '#6d28d9' : (t.type === 'income' ? '#16a34a' : '#dc2626');
+
     const div = document.createElement('div');
     div.className = 'finance-item' + (isChecked ? ' checked' : '') + (isIgnored ? ' ignored' : '');
     div.style = `display:flex; align-items:center; justify-content:space-between; padding:12px; background:var(--surface); border:1px solid var(--border); border-radius:12px; opacity: ${(isChecked || isIgnored) ? '0.6' : '1'}; transition: all 0.2s;`;
     div.innerHTML = `
       <div style="display:flex; align-items:center; gap:12px;">
-        <button class="btn btn-ghost btn-icon-sm" onclick="window.toggleTransactionStatus('${t.id}', event, '${t.occurrenceDate}')" style="color: ${isChecked ? 'var(--primary)' : 'var(--text3)'}; padding: 0; width: 28px; height: 28px;">
-          <span class="material-symbols-outlined" style="font-size:22px; font-variation-settings: 'FILL' ${isChecked ? 1 : 0}">${isChecked ? 'check_circle' : 'radio_button_unchecked'}</span>
+        ${(t.type === 'expense' && !isIgnored && !isPostponedCredit) ? `
+        <button class="btn btn-ghost btn-icon-sm" onclick="event.stopPropagation(); window.toggleTransactionStatus('${t.id}', event, '${t.occurrenceDate}')" style="color: ${isChecked ? '#16a34a' : 'var(--text3)'}; padding: 0; width: 28px; height: 28px;">
+          <span class="material-symbols-outlined" style="font-size:24px; font-variation-settings: 'FILL' ${isChecked ? 1 : 0}">${isChecked ? 'check_circle' : 'radio_button_unchecked'}</span>
         </button>
-        <div style="background:${t.type === 'income' ? '#dcfce7' : '#fee2e2'}; color:${t.type === 'income' ? '#166534' : '#991b1b'}; width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center;">
-          <span class="material-symbols-outlined" style="font-size:18px;">${t.type === 'income' ? 'trending_up' : 'trending_down'}</span>
+        ` : `
+        <div style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; color: var(--text3); opacity: 0.5;">
+          <span class="material-symbols-outlined" style="font-size:22px;">${isPostponedCredit ? 'history' : 'do_not_disturb_on'}</span>
+        </div>
+        `}
+        <div style="background:${(isPostponedCredit || isDeficitExpense) ? '#f5f3ff' : (t.type === 'income' ? '#dcfce7' : '#fee2e2')}; color:${(isPostponedCredit || isDeficitExpense) ? '#6d28d9' : (t.type === 'income' ? '#166534' : '#991b1b')}; width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center;">
+          <span class="material-symbols-outlined" style="font-size:18px;">${(isPostponedCredit || isDeficitExpense) ? 'event_repeat' : (t.type === 'income' ? 'trending_up' : 'trending_down')}</span>
         </div>
         <div>
-          <div style="${(isChecked || isIgnored) ? 'text-decoration: line-through; color: var(--text3);' : ''}">${truncate(t.desc)} ${t.installments > 0 ? `<span style="font-size:0.65rem; color:var(--text3);  margin-left:4px;">(${t.currentInstallment}/${t.installments})</span>` : ''}</div>
+          <div style="${(isChecked || isIgnored) ? 'text-decoration: line-through; color: var(--text3);' : ''}">${truncate(t.desc)} ${t.installments > 0 ? `<span style="font-size:0.65rem; color:var(--text3); margin-left:4px;">(${t.currentInstallment}/${t.installments})</span>` : ''}</div>
           <div style="font-size:0.65rem; color:var(--text2);">${new Date((t.occurrenceDate || t.date) + 'T12:00:00').toLocaleDateString(typeof i18n !== 'undefined' ? i18n.t('locale') : 'pt-BR')}${t.createdAt ? ` • ${typeof i18n !== 'undefined' ? i18n.t('launched_on') : 'Lançado em'} ${new Date(t.createdAt).toLocaleDateString(typeof i18n !== 'undefined' ? i18n.t('locale') : 'pt-BR')}` : ''}</div>
-          ${isIgnored ? `<div style="font-size:0.6rem; color:var(--danger); font-weight: 600; text-transform: uppercase; margin-top: 2px;">${typeof i18n !== 'undefined' ? i18n.t('ignored_instance_badge') : 'Desconsiderado'}</div>` : ''}
+          ${(t.type === 'expense' && !isIgnored && !isPostponedCredit) ? (isChecked ? `<div style="font-size:0.6rem; color:#16a34a; text-transform: uppercase; margin-top: 2px; display: flex; align-items: center; gap: 4px;"><span class="material-symbols-outlined" style="font-size: 10px; font-variation-settings: 'FILL' 1;">check_circle</span> ${typeof i18n !== 'undefined' ? i18n.t('finance_paid') : 'Paga'}</div>` : `<div style="font-size:0.6rem; color:#6d28d9; text-transform: uppercase; margin-top: 2px; display: flex; align-items: center; gap: 4px;"><span class="material-symbols-outlined" style="font-size: 10px;">pending</span> ${isDeficitExpense ? (typeof i18n !== 'undefined' ? i18n.t('finance_deficit_received') : 'Déficit Recebido') : (typeof i18n !== 'undefined' ? i18n.t('finance_pending') : 'Falta Pagar')}</div>`) : `<div style="font-size:0.6rem; color:${isPostponedCredit ? '#6d28d9' : 'var(--text3)'}; text-transform: uppercase; margin-top: 2px;">${isPostponedCredit ? (typeof i18n !== 'undefined' ? i18n.t('finance_type_postponed') : 'Postergado') : ''}</div>`}
+          ${isIgnored ? `<div style="font-size:0.6rem; color:var(--danger); text-transform: uppercase; margin-top: 2px;">${typeof i18n !== 'undefined' ? i18n.t('ignored_instance_badge') : 'Desconsiderado'}</div>` : ''}
         </div>
       </div>
       <div style="display:flex; align-items:center; gap:12px;">
-          <div style="font-size:0.85rem;  color:${t.type === 'income' ? '#16a34a' : '#dc2626'}; text-decoration: ${(isChecked || isIgnored) ? 'line-through' : 'none'};">
+        <div style="font-size:0.85rem; color:${color}; text-decoration: ${(isChecked || isIgnored) ? 'line-through' : 'none'};">
           ${t.type === 'income' ? '+' : '-'} ${formatVal(t.amount)}
         </div>
         <button class="btn btn-ghost btn-icon-sm" onclick="window.deleteTransaction('${t.id}')" style="display:none;">
@@ -3119,7 +3388,6 @@ function renderFinanceList(list) {
       </div>
     `;
     div.onclick = (e) => {
-      // Se clicou no botão de excluir, não abre o formulário
       if (e.target.closest('button')) return;
       play('click');
       closeModal('modal-finances');
@@ -3163,6 +3431,16 @@ window.openTransactionForm = function (d = null, trans = null) {
     }
     window.setTransType(trans.type || 'expense');
 
+    const isPostponed = trans.type === 'postponed' || (trans.desc && trans.desc.includes('Déficit'));
+    if ($('trans-amount')) {
+      $('trans-amount').disabled = isPostponed;
+      $('trans-amount').style.opacity = isPostponed ? '0.6' : '1';
+    }
+    if ($('trans-recurrence')) {
+      $('trans-recurrence').disabled = isPostponed;
+      $('trans-recurrence').style.opacity = isPostponed ? '0.6' : '1';
+    }
+
     // Mostrar botão de "Desconsiderar" para qualquer transação recorrente
     const recArea = $('trans-recurring-options');
     const btnIgnore = $('btn-ignore-trans-instance');
@@ -3201,11 +3479,23 @@ window.openTransactionForm = function (d = null, trans = null) {
 };
 
 window.deleteTransaction = function (id) {
+  const t = S.transactions.find(x => x.id === id);
+  const linkedId = t ? t.linkedId : null;
+
   window.showConfirmModal('confirm_delete_title', 'confirm_delete_trans_desc', async () => {
     play('click');
     showLoading('loading_deleting');
+
+    // 1. Deleta a transação principal
     await userRef(`transactions/${id}`).remove();
-    S.transactions = S.transactions.filter(t => t.id !== id);
+    S.transactions = S.transactions.filter(x => x.id !== id);
+
+    // 2. Se houver link (ex: Postergação), deleta a transação vinculada automaticamente
+    if (linkedId) {
+      await userRef(`transactions/${linkedId}`).remove();
+      S.transactions = S.transactions.filter(x => x.id !== linkedId);
+    }
+
     S.lastRenderedYear = null;
     refreshCalendar();
     hideLoading();
@@ -3449,10 +3739,10 @@ function showPromotionalToasts() {
   if (lp && lp.style.display !== 'none' && !lp.classList.contains('hide')) return;
 
   // 0. Prompt de Instalação (Mobile)
-  if (window.innerWidth < 900 && !localStorage.getItem('agbizu_install_dismissed')) {
-    setTimeout(() => openModal('modal-install-app'), 2000);
+  /*if (window.innerWidth < 900) {
+    setTimeout(() => openModal('modal-install-app'), 1000);
     return; // Não mostra outros toasts se este modal abrir para evitar poluição
-  }
+  }*/
 
   const t = (k) => typeof i18n !== 'undefined' ? i18n.t(k) : k;
 
