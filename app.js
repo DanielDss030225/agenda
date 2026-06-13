@@ -68,6 +68,10 @@ function parseDate(s) {
   return `${y}-${m}-${d}`;
 }
 
+function roundAmount(v) {
+  return Math.round((parseFloat(v) || 0) * 100) / 100;
+}
+
 // Input mask helper
 function applyMask(id, type) {
   const el = document.getElementById(id);
@@ -233,7 +237,7 @@ function startRealtimeSync() {
       S.transactions = Object.entries(raw).map(([k, t]) => ({
         ...t,
         id: k,
-        amount: parseFloat(t.amount) || 0,
+        amount: roundAmount(t.amount),
         checked: t.checked || false
       }));
       if (!$('modal-finances').classList.contains('hidden')) updateFinanceUI();
@@ -1295,7 +1299,7 @@ function updateGlobalFinanceSummary() {
       // Armazena valor absoluto do saldo para o botão
       $('btn-carry-over').onclick = async (e) => {
         if (e) e.stopPropagation();
-        const absValue = Math.abs(balance);
+        const absValue = roundAmount(Math.abs(balance));
         const currentMonthName = new Date(y, m, 1).toLocaleDateString(locale, { month: 'long' });
         const lastDayOfMonth = new Date(y, m + 1, 0); // Último dia do mês atual
 
@@ -1662,6 +1666,7 @@ function buildEventItem(ev, withActions = true, showDate = false, contextDate = 
   `;
 
   wrap.onclick = (e) => {
+    if (e.target.closest('button')) return;
     if (withActions) {
       S.editingEventId = ev.id;
       openEventForm(ev, contextDate);
@@ -1818,7 +1823,9 @@ function openDayModal(d) {
     trList.appendChild(div);
   });
 
-  openModal('modal-day');
+  if ($('modal-day').classList.contains('hidden')) {
+    openModal('modal-day');
+  }
   trackAction('view_day_details');
 }
 
@@ -2667,7 +2674,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (isSavingTrans) return;
       play('click');
       const transId = S.editingTransactionId || Date.now().toString();
-      const transAmount = parseFloat($('trans-amount').value) || 0;
+      const transAmount = roundAmount($('trans-amount').value);
       const transDateValue = parseDate($('trans-date').value);
       const transDescValue = $('trans-desc').value || (typeof i18n !== 'undefined' ? i18n.t('default_transaction') : 'Transação');
 
@@ -3239,11 +3246,11 @@ function updateFinanceUI() {
   const finPaidEl = $('fin-total-paid');
   const finPendingEl = $('fin-total-pending');
 
-  if (finIncEl) finIncEl.textContent = formatVal(totalInc);
-  if (finExpEl) finExpEl.textContent = formatVal(totalExp);
-  if (finBalEl) finBalEl.textContent = formatVal(totalInc - totalExp);
-  if (finPaidEl) finPaidEl.textContent = formatVal(totalPaid);
-  if (finPendingEl) finPendingEl.textContent = formatVal(totalPending);
+  if (finIncEl) finIncEl.textContent = formatVal(roundAmount(totalInc));
+  if (finExpEl) finExpEl.textContent = formatVal(roundAmount(totalExp));
+  if (finBalEl) finBalEl.textContent = formatVal(roundAmount(totalInc - totalExp));
+  if (finPaidEl) finPaidEl.textContent = formatVal(roundAmount(totalPaid));
+  if (finPendingEl) finPendingEl.textContent = formatVal(roundAmount(totalPending));
 
   // Espelhos no Modal
   let mOut = 0, mIn = 0;
@@ -3260,14 +3267,14 @@ function updateFinanceUI() {
   if (fMOut) {
     if (mOut > 0) {
       fMOut.classList.remove('hidden');
-      $('fin-val-mirror-out').textContent = formatVal(mOut);
+      $('fin-val-mirror-out').textContent = formatVal(roundAmount(mOut));
       if ($('lbl-fin-mirror-out')) $('lbl-fin-mirror-out').textContent = tFin('finance_postponed_sent');
     } else fMOut.classList.add('hidden');
   }
   if (fMIn) {
     if (mIn > 0) {
       fMIn.classList.remove('hidden');
-      $('fin-val-mirror-in').textContent = formatVal(mIn);
+      $('fin-val-mirror-in').textContent = formatVal(roundAmount(mIn));
       if ($('lbl-fin-mirror-in')) $('lbl-fin-mirror-in').textContent = tFin('finance_deficit_received');
     } else fMIn.classList.add('hidden');
   }
@@ -3432,14 +3439,22 @@ window.openTransactionForm = function (d = null, trans = null) {
     window.setTransType(trans.type || 'expense');
 
     const isPostponed = trans.type === 'postponed' || (trans.desc && trans.desc.includes('Déficit'));
-    if ($('trans-amount')) {
-      $('trans-amount').disabled = isPostponed;
-      $('trans-amount').style.opacity = isPostponed ? '0.6' : '1';
-    }
-    if ($('trans-recurrence')) {
-      $('trans-recurrence').disabled = isPostponed;
-      $('trans-recurrence').style.opacity = isPostponed ? '0.6' : '1';
-    }
+    
+    // Bloquear campos para transações de postergação/déficit
+    ['trans-amount', 'trans-recurrence', 'trans-desc', 'trans-date'].forEach(id => {
+      const el = $(id);
+      if (el) {
+        el.disabled = isPostponed;
+        el.style.opacity = isPostponed ? '0.6' : '1';
+      }
+    });
+    ['trans-type-income', 'trans-type-expense'].forEach(id => {
+       const el = $(id);
+       if(el) {
+           el.style.pointerEvents = isPostponed ? 'none' : 'auto';
+           el.style.opacity = isPostponed ? '0.6' : '1';
+       }
+    });
 
     // Mostrar botão de "Desconsiderar" para qualquer transação recorrente
     const recArea = $('trans-recurring-options');
@@ -3468,6 +3483,23 @@ window.openTransactionForm = function (d = null, trans = null) {
     if (titleEl) titleEl.textContent = t('finance_add') || 'Nova Transação';
     if (btnDel) btnDel.classList.add('hidden');
     if ($('trans-date')) setFPValue('trans-date', toDateStr(d || new Date()));
+    
+    // Garantir que campos estão liberados
+    ['trans-amount', 'trans-recurrence', 'trans-desc', 'trans-date'].forEach(id => {
+      const el = $(id);
+      if (el) {
+        el.disabled = false;
+        el.style.opacity = '1';
+      }
+    });
+    ['trans-type-income', 'trans-type-expense'].forEach(id => {
+       const el = $(id);
+       if(el) {
+           el.style.pointerEvents = 'auto';
+           el.style.opacity = '1';
+       }
+    });
+
     if ($('trans-recurrence')) $('trans-recurrence').value = 'none';
     $('group-installments')?.classList.add('hidden');
     if ($('trans-installments')) $('trans-installments').value = '';

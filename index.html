@@ -985,38 +985,41 @@
               </div>
 
               <!-- NOVAS SUB-METRICAS NO GLOBAL -->
-              <div
-                style="background: #f8fafc; padding: 4px; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0; grid-column: span 1; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                <div style="font-size: 0.6rem; color: #15803d; text-transform: uppercase; ">Pagas:
-                </div>
-                <div id="glb-total-paid" style="font-size: 0.75rem; color: #052e16; ">R$ 0,00</div>
-              </div>
+              <!-- SUB-METRICS ROW -->
+              <div style="grid-column: span 3; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; align-items: stretch;">
 
-              <div
-                style="background: #f8fafc; padding: 4px; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0; grid-column: span 2; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                <div style="font-size: 0.6rem; color: #b45309; text-transform: uppercase; ">Faltam:
+                <div
+                  style="background: #f8fafc; padding: 8px; border-radius: 10px; text-align: center; border: 1px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;">
+                  <div style="font-size: 0.6rem; color: #15803d; text-transform: uppercase;">Pagas:</div>
+                  <div id="glb-total-paid" style="font-size: 0.75rem; color: #052e16;">R$ 0,00</div>
                 </div>
-                <div id="glb-total-pending" style="font-size: 0.75rem; color: #78350f; ">R$ 0,00</div>
-              </div>
 
-              <!-- ESPELHOS INFORMATIVOS (CARDS DE POSTERGAÇÃO) -->
-              <div id="mirrors-wrapper" class="hidden" style="grid-column: span 3; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 4px;">
-                <div id="mirror-postponed-out" class="hidden" style="background: #faf5ff; padding: 6px; border-radius: 10px; border: 1px solid #e9d5ff; display: flex; align-items: center; justify-content: space-between; height: 100%;">
-                  <div style="display:flex; align-items:center; gap:8px;">
-                    <span class="material-symbols-outlined" style="font-size: 16px; color: #6d28d9;">history</span>
-                    <div id="lbl-mirror-out" style="font-size: 0.65rem; color: #6d28d9;  text-transform: uppercase;" data-i18n="finance_postponed_sent">Postergação Enviada</div>
+                <div
+                  style="background: #f8fafc; padding: 8px; border-radius: 10px; text-align: center; border: 1px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;">
+                  <div style="font-size: 0.6rem; color: #b45309; text-transform: uppercase;">Faltam:</div>
+                  <div id="glb-total-pending" style="font-size: 0.75rem; color: #78350f;">R$ 0,00</div>
+                </div>
+
+                <div id="mirror-postponed-out" class="hidden"
+                  style="background: #faf5ff; padding: 8px; border-radius: 10px; border: 1px solid #e9d5ff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;">
+                  <div style="display:flex; align-items:center; gap:4px;">
+                    <span class="material-symbols-outlined" style="font-size: 14px; color: #6d28d9;">history</span>
+                    <div id="lbl-mirror-out" style="font-size: 0.6rem; color: #6d28d9; text-transform: uppercase;" data-i18n="finance_postponed_sent">Post. Env.</div>
                   </div>
-                  <div id="val-mirror-out" style="font-size: 0.75rem; color: #4c1d95; ">R$ 0,00</div>
+                  <div id="val-mirror-out" style="font-size: 0.75rem; color: #4c1d95;">R$ 0,00</div>
                 </div>
 
-                <div id="mirror-postponed-in" class="hidden" style="background: #fdf4ff; padding: 6px; border-radius: 10px; border: 1px solid #f5d0fe; display: flex; align-items: center; justify-content: space-between; height: 100%;">
-                  <div style="display:flex; align-items:center; gap:8px;">
-                    <span class="material-symbols-outlined" style="font-size: 16px; color: #a21caf;">event_repeat</span>
-                    <div id="lbl-mirror-in" style="font-size: 0.65rem; color: #a21caf;  text-transform: uppercase;" data-i18n="finance_deficit_received">Déficit Recebido</div>
+                <div id="mirror-postponed-in" class="hidden"
+                  style="background: #fdf4ff; padding: 8px; border-radius: 10px; border: 1px solid #f5d0fe; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;">
+                  <div style="display:flex; align-items:center; gap:4px;">
+                    <span class="material-symbols-outlined" style="font-size: 14px; color: #a21caf;">event_repeat</span>
+                    <div id="lbl-mirror-in" style="font-size: 0.6rem; color: #a21caf; text-transform: uppercase;" data-i18n="finance_deficit_received">Déf. Rec.</div>
                   </div>
-                  <div id="val-mirror-in" style="font-size: 0.75rem; color: #701a75; ">R$ 0,00</div>
+                  <div id="val-mirror-in" style="font-size: 0.75rem; color: #701a75;">R$ 0,00</div>
                 </div>
+
               </div>
+
               <!-- BOTAO PARA SALDO NEGATIVO -->
               <div id="carry-over-container" class="hidden" style="grid-column: span 3; padding-top: 4px;">
                 <button id="btn-carry-over" class="btn btn-danger btn-sm"
@@ -1554,59 +1557,56 @@
         <div class="finance-summary-grid"
           style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px;">
 
-          <div id="fin-filter-income"
-            onclick="window.setFinanceFilter('income')"
+          <div id="fin-filter-income" onclick="window.setFinanceFilter('income')"
             style="background: #eef2ff; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #c7d2fe; cursor:pointer; transition: box-shadow 0.2s;">
-            <div style="font-size: 0.65rem; color: #4338ca; text-transform: uppercase;" data-i18n="finance_income">Receitas</div>
+            <div style="font-size: 0.65rem; color: #4338ca; text-transform: uppercase;" data-i18n="finance_income">
+              Receitas</div>
             <div id="fin-total-income" style="font-size: 1.1rem; color: #1e1b4b; line-height: 1;">R$ 0,00</div>
           </div>
 
-          <div id="fin-filter-expense"
-            onclick="window.setFinanceFilter('expense')"
+          <div id="fin-filter-expense" onclick="window.setFinanceFilter('expense')"
             style="background: #fff1f2; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #fecdd3; cursor:pointer; transition: box-shadow 0.2s;">
-            <div style="font-size: 0.65rem; color: #be123c; text-transform: uppercase;" data-i18n="finance_expenses">Despesas</div>
+            <div style="font-size: 0.65rem; color: #be123c; text-transform: uppercase;" data-i18n="finance_expenses">
+              Despesas</div>
             <div id="fin-total-expenses" style="font-size: 1.1rem; color: #4c0519; line-height: 1;">R$ 0,00</div>
           </div>
 
-          <div id="fin-filter-paid"
-            onclick="window.setFinanceFilter('paid')"
+          <div id="fin-filter-paid" onclick="window.setFinanceFilter('paid')"
             style="background: #f0fdf4; padding: 10px; border-radius: 12px; text-align: center; border: 1px solid #bbf7d0; cursor:pointer; transition: box-shadow 0.2s;">
             <div style="font-size: 0.6rem; color: #15803d; text-transform: uppercase;">Pagas</div>
             <div id="fin-total-paid" style="font-size: 0.95rem; color: #052e16; line-height: 1;">R$ 0,00</div>
           </div>
 
-          <div id="fin-filter-pending"
-            onclick="window.setFinanceFilter('pending')"
+          <div id="fin-filter-pending" onclick="window.setFinanceFilter('pending')"
             style="background: #fffbeb; padding: 10px; border-radius: 12px; text-align: center; border: 1px solid #fef3c7; cursor:pointer; transition: box-shadow 0.2s;">
             <div style="font-size: 0.6rem; color: #b45309; text-transform: uppercase;">Pendentes</div>
             <div id="fin-total-pending" style="font-size: 0.95rem; color: #78350f; line-height: 1;">R$ 0,00</div>
           </div>
 
           <!-- ESPELHOS MODAL -->
-          <div id="fin-mirror-out" class="hidden"
-            onclick="window.setFinanceFilter('postponed')"
+          <div id="fin-mirror-out" class="hidden" onclick="window.setFinanceFilter('postponed')"
             style="background: #faf5ff; padding: 10px; border-radius: 12px; border: 1px solid #e9d5ff; grid-column: span 2; display: flex; align-items: center; justify-content: space-between; cursor:pointer; transition: box-shadow 0.2s;">
             <div style="display:flex; align-items:center; gap:8px;">
-               <span class="material-symbols-outlined" style="font-size: 20px; color: #6d28d9;">history</span>
-               <div id="lbl-fin-mirror-out" style="font-size: 0.75rem; color: #6d28d9;">Postergação p/ Próximo Mês</div>
+              <span class="material-symbols-outlined" style="font-size: 20px; color: #6d28d9;">history</span>
+              <div id="lbl-fin-mirror-out" style="font-size: 0.75rem; color: #6d28d9;">Postergação p/ Próximo Mês</div>
             </div>
             <div id="fin-val-mirror-out" style="font-size: 0.95rem; color: #4c1d95;">R$ 0,00</div>
           </div>
 
-          <div id="fin-mirror-in" class="hidden"
-            onclick="window.setFinanceFilter('deficit')"
+          <div id="fin-mirror-in" class="hidden" onclick="window.setFinanceFilter('deficit')"
             style="background: #fdf4ff; padding: 10px; border-radius: 12px; border: 1px solid #f5d0fe; grid-column: span 2; display: flex; align-items: center; justify-content: space-between; cursor:pointer; transition: box-shadow 0.2s;">
             <div style="display:flex; align-items:center; gap:8px;">
-               <span class="material-symbols-outlined" style="font-size: 20px; color: #a21caf;">event_repeat</span>
-               <div id="lbl-fin-mirror-in" style="font-size: 0.75rem; color: #a21caf;">Déficit vindo do Mês Anterior</div>
+              <span class="material-symbols-outlined" style="font-size: 20px; color: #a21caf;">event_repeat</span>
+              <div id="lbl-fin-mirror-in" style="font-size: 0.75rem; color: #a21caf;">Déficit vindo do Mês Anterior
+              </div>
             </div>
             <div id="fin-val-mirror-in" style="font-size: 0.95rem; color: #701a75;">R$ 0,00</div>
           </div>
 
-          <div id="fin-filter-all"
-            onclick="window.setFinanceFilter('all')"
+          <div id="fin-filter-all" onclick="window.setFinanceFilter('all')"
             style="background: #f8fafc; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #e2e8f0; grid-column: span 2; cursor:pointer; transition: box-shadow 0.2s;">
-            <div style="font-size: 0.65rem; color: #475569; text-transform: uppercase;" data-i18n="finance_balance">Saldo Geral</div>
+            <div style="font-size: 0.65rem; color: #475569; text-transform: uppercase;" data-i18n="finance_balance">
+              Saldo Geral</div>
             <div id="fin-total-balance" style="font-size: 1.2rem; color: #0f172a; line-height: 1;">R$ 0,00</div>
           </div>
         </div>
@@ -1645,8 +1645,8 @@
           </div>
           <p id="settings-phone-hint" style="font-size: 0.7rem; color: var(--text3); margin-top: 4px;">Utilizado para
             envio de notificações automáticas via WhatsApp.</p>
-          <p id="settings-verify-status" class="hidden"
-            style="font-size: 0.7rem; color: #16a34a;  margin-top: 2px;"></p>
+          <p id="settings-verify-status" class="hidden" style="font-size: 0.7rem; color: #16a34a;  margin-top: 2px;">
+          </p>
         </div>
 
         <div id="group-settings-verify-code" class="field-group hidden"

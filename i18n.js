@@ -168,8 +168,8 @@ const TRANSLATIONS = {
     finance_status_label: 'Status de Pagamento',
     carry_over_btn_prefix: 'Postergar saldo negativo para ',
     finance_type_postponed: 'Postergado',
-    finance_postponed_sent: 'Postergação Enviada',
-    finance_deficit_received: 'Déficit Recebido',
+    finance_postponed_sent: 'Postergação',
+    finance_deficit_received: 'Mês_Anterior',
 
     // ---- Search Modal ----
     search_title: 'Pesquisar',
