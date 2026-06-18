@@ -1628,10 +1628,14 @@ function buildEventItem(ev, withActions = true, showDate = false, contextDate = 
 
   wrap.innerHTML = `
     <div class="event-stripe" style="background:${catColor(ev.category)}"></div>
+    ${withActions ? `
     <div style="display:flex; align-items:center; padding-left: 8px;">
-     
+      <button class="btn btn-ghost btn-icon-sm" onclick="event.stopPropagation(); window.toggleEventStatus('${ev.id}', event, ${contextDate ? `'${contextDate.toISOString().split('T')[0]}'` : 'null'})" style="color: ${isCompleted ? '#16a34a' : 'var(--text3)'}; padding: 0; width: 28px; height: 28px; flex-shrink:0;">
+        <span class="material-symbols-outlined" style="font-size:24px; font-variation-settings: 'FILL' ${isCompleted ? 1 : 0}">${isCompleted ? 'check_circle' : 'radio_button_unchecked'}</span>
+      </button>
     </div>
-    <div class="event-body" style="padding-left: 4px;">
+    ` : ''}
+    <div class="event-body" style="padding-left: ${withActions ? '4px' : '12px'};">
       <div style="display:flex; align-items:center; justify-content: space-between; gap: 8px;">
         <div class="event-title" style="${(ev.isIgnored || isCompleted) ? 'text-decoration: line-through;' : ''}">${escHtml(ev.title)}</div>
         ${dateHtml}
