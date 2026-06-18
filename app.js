@@ -1629,9 +1629,7 @@ function buildEventItem(ev, withActions = true, showDate = false, contextDate = 
   wrap.innerHTML = `
     <div class="event-stripe" style="background:${catColor(ev.category)}"></div>
     <div style="display:flex; align-items:center; padding-left: 8px;">
-      <button class="btn btn-ghost btn-icon-sm" onclick="event.stopPropagation(); window.toggleEventStatus('${ev.id}', event, '${ev.occurrenceDate || ev.date}')" style="color: ${isCompleted ? 'var(--primary)' : 'var(--text3)'}; padding: 0; width: 32px; height: 32px; flex-shrink: 0;">
-        <span class="material-symbols-outlined" style="font-size:24px; font-variation-settings: 'FILL' ${isCompleted ? 1 : 0}">${isCompleted ? 'check_circle' : 'radio_button_unchecked'}</span>
-      </button>
+     
     </div>
     <div class="event-body" style="padding-left: 4px;">
       <div style="display:flex; align-items:center; justify-content: space-between; gap: 8px;">
@@ -3302,18 +3300,18 @@ let _financeFilter = 'all';
 let _financeListAll = [];
 
 const FILTER_RING = {
-  income:    '0 0 0 3px #818cf8',
-  expense:   '0 0 0 3px #fb7185',
-  paid:      '0 0 0 3px #4ade80',
-  pending:   '0 0 0 3px #fcd34d',
+  income: '0 0 0 3px #818cf8',
+  expense: '0 0 0 3px #fb7185',
+  paid: '0 0 0 3px #4ade80',
+  pending: '0 0 0 3px #fcd34d',
   postponed: '0 0 0 3px #a78bfa',
-  deficit:   '0 0 0 3px #e879f9',
-  all:       'none',
+  deficit: '0 0 0 3px #e879f9',
+  all: 'none',
 };
 
 const FILTER_CARD_IDS = {
   income: 'fin-filter-income', expense: 'fin-filter-expense',
-  paid: 'fin-filter-paid',   pending: 'fin-filter-pending',
+  paid: 'fin-filter-paid', pending: 'fin-filter-pending',
   postponed: 'fin-mirror-out', deficit: 'fin-mirror-in',
   all: 'fin-filter-all',
 };
@@ -3337,12 +3335,12 @@ function renderFinanceList(list) {
 
   // Aplicar filtro ativo
   let filtered = list;
-  if (_financeFilter === 'income')    filtered = list.filter(t => t.type === 'income');
-  else if (_financeFilter === 'expense')  filtered = list.filter(t => t.type === 'expense' && !(t.desc && t.desc.includes('Déficit')));
-  else if (_financeFilter === 'paid')     filtered = list.filter(t => t.type === 'expense' && !!t.checked);
-  else if (_financeFilter === 'pending')  filtered = list.filter(t => t.type === 'expense' && !t.checked);
+  if (_financeFilter === 'income') filtered = list.filter(t => t.type === 'income');
+  else if (_financeFilter === 'expense') filtered = list.filter(t => t.type === 'expense' && !(t.desc && t.desc.includes('Déficit')));
+  else if (_financeFilter === 'paid') filtered = list.filter(t => t.type === 'expense' && !!t.checked);
+  else if (_financeFilter === 'pending') filtered = list.filter(t => t.type === 'expense' && !t.checked);
   else if (_financeFilter === 'postponed') filtered = list.filter(t => t.type === 'postponed');
-  else if (_financeFilter === 'deficit')  filtered = list.filter(t => t.type === 'expense' && t.desc && t.desc.includes('Déficit'));
+  else if (_financeFilter === 'deficit') filtered = list.filter(t => t.type === 'expense' && t.desc && t.desc.includes('Déficit'));
 
   const container = $('finance-list');
   container.innerHTML = '';
@@ -3439,7 +3437,7 @@ window.openTransactionForm = function (d = null, trans = null) {
     window.setTransType(trans.type || 'expense');
 
     const isPostponed = trans.type === 'postponed' || (trans.desc && trans.desc.includes('Déficit'));
-    
+
     // Bloquear campos para transações de postergação/déficit
     ['trans-amount', 'trans-recurrence', 'trans-desc', 'trans-date'].forEach(id => {
       const el = $(id);
@@ -3449,11 +3447,11 @@ window.openTransactionForm = function (d = null, trans = null) {
       }
     });
     ['trans-type-income', 'trans-type-expense'].forEach(id => {
-       const el = $(id);
-       if(el) {
-           el.style.pointerEvents = isPostponed ? 'none' : 'auto';
-           el.style.opacity = isPostponed ? '0.6' : '1';
-       }
+      const el = $(id);
+      if (el) {
+        el.style.pointerEvents = isPostponed ? 'none' : 'auto';
+        el.style.opacity = isPostponed ? '0.6' : '1';
+      }
     });
 
     // Mostrar botão de "Desconsiderar" para qualquer transação recorrente
@@ -3483,7 +3481,7 @@ window.openTransactionForm = function (d = null, trans = null) {
     if (titleEl) titleEl.textContent = t('finance_add') || 'Nova Transação';
     if (btnDel) btnDel.classList.add('hidden');
     if ($('trans-date')) setFPValue('trans-date', toDateStr(d || new Date()));
-    
+
     // Garantir que campos estão liberados
     ['trans-amount', 'trans-recurrence', 'trans-desc', 'trans-date'].forEach(id => {
       const el = $(id);
@@ -3493,11 +3491,11 @@ window.openTransactionForm = function (d = null, trans = null) {
       }
     });
     ['trans-type-income', 'trans-type-expense'].forEach(id => {
-       const el = $(id);
-       if(el) {
-           el.style.pointerEvents = 'auto';
-           el.style.opacity = '1';
-       }
+      const el = $(id);
+      if (el) {
+        el.style.pointerEvents = 'auto';
+        el.style.opacity = '1';
+      }
     });
 
     if ($('trans-recurrence')) $('trans-recurrence').value = 'none';
