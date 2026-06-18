@@ -142,7 +142,7 @@
     }
 
     .msg {
-      max-width: 85%;
+      max-width: 95%;
       padding: 10px 14px;
       border-radius: var(--radius);
       font-size: 15px;
@@ -186,10 +186,12 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
-      min-width: 220px;
+      min-width: 250px;
+      width: 100%;
     }
+
     .agent-card-header {
-      
+
       font-size: 1.05rem;
       border-bottom: 1px solid var(--border);
       padding-bottom: 8px;
@@ -199,17 +201,20 @@
       align-items: center;
       gap: 8px;
     }
+
     .agent-card-body {
       display: flex;
       flex-direction: column;
       gap: 6px;
     }
-    .agent-card-body > div {
+
+    .agent-card-body>div {
       display: flex;
       align-items: center;
       gap: 10px;
       font-size: 0.95rem;
     }
+
     .agent-card-body span {
       width: 20px;
       text-align: center;
@@ -291,7 +296,7 @@
       padding: 8px 18px;
       border-radius: 20px;
       font-size: 0.85rem;
-      
+
       cursor: pointer;
       color: var(--primary);
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
@@ -427,6 +432,7 @@
       currentUser: localStorage.getItem('agbizu_session'),
       userScale: null,
       events: [],
+      transactions: [],
       syncing: true // Indica se estamos aguardando a primeira conexão com o servidor
     };
 
@@ -438,11 +444,14 @@
         if (data) {
           S.userScale = data.scale;
           S.events = data.events ? Object.keys(data.events).map(k => ({ id: k, ...data.events[k] })) : [];
+          S.transactions = data.transactions ? Object.keys(data.transactions).map(k => ({ id: k, ...data.transactions[k] })) : [];
         }
-        S.syncing = false; // Sincronização básica concluída (mesmo se data for null)
+        S.syncing = false;
       });
+      loadAdminIntents();
     } else {
-      S.syncing = false; // Não há usuário para sincronizar
+      S.syncing = false;
+      loadAdminIntents();
     }
 
     function toDateStr(d) {
@@ -519,10 +528,22 @@
       return (typeof i18n !== 'undefined') ? i18n.lang() : 'pt';
     }
 
-    function processInput(text) {
-      let q = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[?.!,]/g, "");
+    const monthMap = {
+      'janeiro': 0, 'fevereiro': 1, 'marco': 2, 'abril': 3, 'maio': 4, 'junho': 5,
+      'julho': 6, 'agosto': 7, 'setembro': 8, 'outubro': 9, 'novembro': 10, 'dezembro': 11,
+      'jan': 0, 'fev': 1, 'mar': 2, 'abr': 3, 'mai': 4, 'jun': 5,
+      'jul': 6, 'ago': 7, 'set': 8, 'out': 9, 'nov': 10, 'dez': 11,
+      'january': 0, 'february': 1, 'march': 2, 'may': 4, 'june': 5, 'july': 6, 'august': 7, 'september': 8, 'october': 9, 'november': 10, 'december': 11
+    };
 
-      // Number-word to numeral map (PT + EN)
+    const dowMap = {
+      'domingo': 0, 'segunda': 1, 'terca': 2, 'quarta': 3, 'quinta': 4, 'sexta': 5, 'sabado': 6,
+      'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3, 'thursday': 4, 'friday': 5, 'saturday': 6
+    };
+
+    function processInput(text) {
+      let q = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[?.!,-]/g, " ").replace(/\s+/g, " ");
+
       // Number-word to numeral map (PT + EN)
       const numMap = {
         'um': 1, 'uma': 1, 'dois': 2, 'tres': 3, 'quatro': 4, 'cinco': 5, 'seis': 6, 'sete': 7, 'oito': 8, 'nove': 9, 'dez': 10,
@@ -543,7 +564,45 @@
       addMsg(res, 'bot');
     }
 
-    let mem = { holiday: null, intent: null, date: null };
+    let mem = { holiday: null, intent: null, date: null, pendingEvent: null, pendingDeleteList: null };
+    let adminIntents = [];
+
+    function loadAdminIntents() {
+      try {
+        db.ref('admin/agent_intents').on('value', (snapshot) => {
+          const data = snapshot.val();
+          if (data) {
+            adminIntents = Object.values(data)
+              .filter(i => i && i.trigger && i.action)
+              .map(i => {
+                // Apply the SAME transformations that processInput applies to q
+                let nt = i.trigger.toLowerCase()
+                  .normalize("NFD")
+                  .replace(/[\u0300-\u036f]/g, "")
+                  .replace(/[?.!,-]/g, " ")
+                  .trim();
+                // Number words PT+EN
+                const numMap = {
+                  'um': 1, 'uma': 1, 'dois': 2, 'tres': 3, 'quatro': 4, 'cinco': 5,
+                  'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5
+                };
+                for (const [word, val] of Object.entries(numMap))
+                  nt = nt.replace(new RegExp('\\b' + word + '\\b', 'g'), val);
+                // semana → 7, mes → 30
+                nt = nt.replace(/\b1\s+semana\b/g, '7').replace(/\bsemana\b/g, '7');
+                nt = nt.replace(/\bmes\b/g, '30');
+                return { ...i, normalizedTrigger: nt };
+              });
+            console.log(`[Agente] ${adminIntents.length} intencoes carregadas:`, adminIntents.map(i => `"${i.normalizedTrigger}" → ${i.action}`));
+          } else {
+            adminIntents = [];
+            console.log('[Agente] Nenhuma intencao cadastrada no admin.');
+          }
+        });
+      } catch (e) {
+        console.error("Erro ao carregar intencoes administrativas:", e);
+      }
+    }
 
     // ─────────────────────────────────────────────────────────
     // BILINGUAL HOLIDAY TABLE  (PT name → date)
@@ -568,15 +627,114 @@
       const lang = getLang();
       const isEN = lang === 'en';
       const locale = isEN ? 'en-US' : 'pt-BR';
+
+      // ── Declarações das variáveis principais ──
+      let currentIntent = null;
+      let currentHoliday = null;
       let targetDate = new Date();
       let foundRelativeDate = false;
       let relativeText = "";
-      let currentIntent = null;
-      let currentHoliday = null;
+      let currentCustomResponse = null;
+      let forcedFullScale = false;
+
+      // ── Custom Admin Intents (verificados ANTES de qualquer outra lógica) ──
+      const customMatch = adminIntents.find(i => i.normalizedTrigger && q.includes(i.normalizedTrigger));
+      if (customMatch) {
+        if (customMatch.action === 'PLAIN_TEXT') return processTemplate(customMatch.response, { q });
+
+        if (customMatch.action === 'CREATE_EVENT') currentIntent = 'create_event';
+        else if (customMatch.action === 'LIST_EVENTS') currentIntent = 'list_events';
+        else if (customMatch.action === 'DELETE_EVENT') currentIntent = 'delete_event';
+        else if (customMatch.action === 'SCALE_CHECK') { currentIntent = 'scale'; forcedFullScale = true; }
+        else if (customMatch.action === 'SCALE_DATE_CHECK') {
+          // Consulta de data específica: extrai a data da mensagem do usuário e verifica a escala
+          currentIntent = 'scale';
+          // forcedFullScale permanece false → segue para o path de verificação de dia único
+        }
+        else if (customMatch.action === 'FINANCIAL_LOG') currentIntent = 'finance';
+        else if (customMatch.action === 'NEXT_OFF') {
+          const nextOffResp = isEN ? "Checking your next day off..." : "Consultando sua próxima folga...";
+          return nextOffResp + (customMatch.response ? "\n" + processTemplate(customMatch.response) : "");
+        }
+        else if (customMatch.action === 'SYSTEM_JOKE') return (customMatch.response ? processTemplate(customMatch.response) + "\n\n" : "") + rand(PIADAS);
+        else if (customMatch.action === 'SYSTEM_MOVIE') return (customMatch.response ? processTemplate(customMatch.response) + "\n\n" : "") + rand(FILMES);
+        else if (customMatch.action === 'SYSTEM_BIBLE') return (customMatch.response ? processTemplate(customMatch.response) + "\n\n" : "") + rand(BIBLIA);
+        else if (customMatch.action === 'SYSTEM_MOTIVATION') return (customMatch.response ? processTemplate(customMatch.response) + "\n\n" : "") + rand(MOTIVACAO);
+        else if (customMatch.action === 'SYSTEM_HELP') return (customMatch.response ? processTemplate(customMatch.response) + "\n\n" : "") + (isEN ? "I can help you with your schedule, events, and finances!" : "Posso te ajudar com sua escala, eventos e finanças!");
+
+        currentCustomResponse = customMatch.response;
+      }
+
+
+      const isFullAgendaCancel = /\b(cancelar agenda|excluir agenda|apagar agenda|cancel schedule|delete schedule)\b/i.test(q);
+      if (isFullAgendaCancel) {
+        mem.intent = 'cancel_agenda_confirm';
+        return isEN ? "Do you want to delete items from the **day**, **week**, or **month**? 🤔" : "Você deseja excluir itens do **dia**, **semana** ou **mês**? 🤔";
+      }
+
+      if (mem.intent === 'cancel_agenda_confirm') {
+        let periodResults = [];
+        let periodName = "";
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+
+        const lowRaw = rawText.toLowerCase();
+        if (lowRaw.includes('dia') || lowRaw.includes('day')) {
+          const dStr = toDateStr(now);
+          periodResults = S.events.filter(e => e.date === dStr).map(e => ({ ...e, itemType: 'event' }));
+          periodName = isEN ? "today" : "hoje";
+        } else if (lowRaw.includes('semana') || lowRaw.includes('week')) {
+          const d = now.getDay();
+          const start = new Date(now); start.setDate(now.getDate() - d);
+          const end = new Date(now); end.setDate(now.getDate() + (6 - d));
+          end.setHours(23, 59, 59);
+          periodResults = S.events.filter(e => {
+            const ed = new Date(e.date + 'T12:00:00');
+            return ed >= start && ed <= end;
+          }).map(e => ({ ...e, itemType: 'event' }));
+          periodName = isEN ? "this week" : "esta semana";
+        } else if (lowRaw.includes('mes') || lowRaw.includes('month')) {
+          const m = now.getMonth();
+          const y = now.getFullYear();
+          periodResults = S.events.filter(e => {
+            const ed = new Date(e.date + 'T12:00:00');
+            return ed.getMonth() === m && ed.getFullYear() === y;
+          }).map(e => ({ ...e, itemType: 'event' }));
+          periodName = isEN ? "this month" : "este mês";
+        } else {
+          return isEN ? "I didn't understand. Please say **day**, **week**, or **month**." : "Não entendi. Por favor, diga **dia**, **semana** ou **mês**.";
+        }
+
+        mem.intent = null;
+        if (periodResults.length === 0) {
+          return isEN ? `I found no events for ${periodName}.` : `Não encontrei eventos para ${periodName}.`;
+        }
+        
+        // Populate and trigger resolution list
+        mem.pendingDeleteList = periodResults;
+        currentIntent = 'resolve_delete'; 
+        // We let the code continue so it hits the isDeleteEvent block with the list already populated.
+      }
 
       // Explicit year mention (e.g. 2026, 2027)
       const yearMatch = q.match(/\b(20\d\d)\b/);
       const explicitYear = yearMatch ? parseInt(yearMatch[1]) : null;
+
+      // ── Process pending events first if we found a date ──
+      // If we have a pending event and the current message seems to just be about a date
+      const isJustDateQuery = (q.split(' ').length <= 3) && (q.includes('amanha') || q.includes('hoje') || q.includes('ontem') || q.match(/\b(\d{1,2})\/(\d{1,2})/) || Object.keys(dowMap).some(d => q.includes(d)));
+
+      if (mem.pendingEvent && isJustDateQuery) {
+        // We will continue below, but we set a flag to merge
+        currentIntent = 'resolve_pending';
+      }
+
+      // ── Process pending deletions ──
+      const isSelectNumber = /^\d+$/.test(q);
+      const isSelectAll = q.includes('todos') || q.includes('all');
+      if (mem.pendingDeleteList && (isSelectNumber || isSelectAll)) {
+        currentIntent = 'resolve_delete';
+      }
 
       // ── Identify scale/schedule intent (bilingual) ──
       const isScaleQuery = q.includes('folga') || q.includes('trabalha') || q.includes('trabalho') || q.includes('trampa') || q.includes('trampo') || q.includes('servico') || q.includes('escala') || q.includes('descans')
@@ -600,17 +758,20 @@
           : (explicitYear ? explicitYear : new Date().getFullYear());
 
         targetDate = new Date(y, m, d);
+
         foundRelativeDate = true;
         relativeText = `no dia ${explicitDateMatch[0]}`;
-      } else if (q.includes('amanha') || q.includes('tomorrow')) {
-        targetDate.setDate(targetDate.getDate() + 1);
-        foundRelativeDate = true; relativeText = isEN ? 'tomorrow' : 'amanhã';
       } else if (q.includes('depois de amanha') || q.includes('day after tomorrow') || q.includes('overmorrow')) {
         targetDate.setDate(targetDate.getDate() + 2);
         foundRelativeDate = true; relativeText = isEN ? 'the day after tomorrow' : 'depois de amanhã';
+      } else if (q.includes('amanha') || q.includes('tomorrow')) {
+        targetDate.setDate(targetDate.getDate() + 1);
+        foundRelativeDate = true; relativeText = isEN ? 'tomorrow' : 'amanhã';
       } else if (q.includes('ontem') || q.includes('yesterday')) {
         targetDate.setDate(targetDate.getDate() - 1);
         foundRelativeDate = true; relativeText = isEN ? 'yesterday' : 'ontem';
+      } else if (q.includes('mais tarde') || q.includes('later')) {
+        foundRelativeDate = true; relativeText = isEN ? 'later today' : 'mais tarde';
       } else if (q.includes('daqui') || q.includes('in ') || q.includes('em ')) {
         const n = q.match(/\d+/);
         if (n && n[0].length < 4) {
@@ -618,12 +779,49 @@
           targetDate.setDate(targetDate.getDate() + days);
           foundRelativeDate = true; relativeText = isEN ? `in ${days} days` : `daqui a ${days} dias`;
         }
-      } else if (q.includes('dia ') || q.includes('day ') || q.includes('on the ')) {
+      } else if (q.includes('dia ') || q.includes('day ') || q.includes('on the ') || q.match(/\b\d{1,2}\s+(?:de|of)\s+[a-z]{3,}\b/i)) {
         const n = q.match(/\d+/);
         if (n && n[0].length < 4) {
           targetDate.setDate(parseInt(n[0]));
           if (explicitYear) targetDate.setFullYear(explicitYear);
-          foundRelativeDate = true; relativeText = isEN ? `on the ${n[0]}` : `no dia ${n[0]}`;
+          foundRelativeDate = true;
+
+          // Check if month name follows (e.g. "dia 26 de setembro" or "26 de setembro")
+          for (const [mName, mVal] of Object.entries(monthMap)) {
+            const reg = new RegExp('\\b' + mName + '\\b', 'i');
+            if (q.match(reg)) {
+              targetDate.setMonth(mVal);
+              break;
+            }
+          }
+          relativeText = isEN ? `on the ${n[0]}` : `no dia ${n[0]}`;
+        }
+      } else {
+        // Check for standalone day of week or month
+        for (const [dowName, dowVal] of Object.entries(dowMap)) {
+          const reg = new RegExp('\\b' + dowName + '\\b', 'i');
+          if (q.match(reg)) {
+            const today = new Date();
+            const currDow = today.getDay();
+            let diff = dowVal - currDow;
+            if (diff <= 0) diff += 7;
+            targetDate.setDate(today.getDate() + diff);
+            foundRelativeDate = true;
+            relativeText = isEN ? `on ${dowName}` : `na ${dowName}`;
+            break;
+          }
+        }
+        if (!foundRelativeDate) {
+          for (const [mName, mVal] of Object.entries(monthMap)) {
+            const reg = new RegExp('\\b' + mName + '\\b', 'i');
+            if (q.match(reg)) {
+              targetDate.setMonth(mVal);
+              targetDate.setDate(1); // Default to 1st of month
+              foundRelativeDate = true;
+              relativeText = isEN ? `in ${mName}` : `em ${mName}`;
+              break;
+            }
+          }
         }
       }
 
@@ -661,6 +859,8 @@
           : `no ${nameClean} de ${explicitYear}`;
       }
 
+
+
       // Memory inheritance: follow-up questions keep scale intent
       if (!currentIntent && !isExtraContent && (q.includes('e') || q.includes('and') || explicitYear || foundRelativeDate) && mem.intent === 'scale') {
         currentIntent = 'scale';
@@ -681,51 +881,129 @@
       // ==========================================
       const isHelp = /\b(como|ajuda|duvida|mudar|alterar|trocar|how|help|change|what can|what do)\b/i.test(q);
 
-      const isExpense = !isHelp && /\b(despesa|gasto|paguei|conta|debito|perdi|expense|paid|cost|spent)\b/i.test(q);
-      const isIncome = !isHelp && /\b(receita|ganhei|recebi|salario|entrada|pix|income|earned|received|salary)\b/i.test(q);
+      const isExpense = !isHelp && /\b(despesa|despesas|gasto|gastos|paguei|conta|contas|debito|perdi|expense|expenses|paid|cost|spent|lancar)\b/i.test(q) && !/\b(receita|receitas|ganhei|recebi|salario|entrada|pix|income|earned|received|salary)\b/i.test(q);
+      const isIncome = !isHelp && /\b(receita|receitas|ganhei|recebi|salario|entrada|pix|income|earned|received|salary|lancar)\b/i.test(q) && !isExpense;
 
       if (isExpense || isIncome) {
-        const amountMatch = rawText.match(/(\d+(?:[.,]\d{1,2})?)/);
+        // 1. EXTRAÇÃO DE TÍTULO ENTRE ASPAS (Preserva descrições complexas)
+        // Suporta: "...", '...', “...”, ‘...’
+        const quoteMatch = rawText.match(/["'“”‘’]([^"'“”‘’]+)["'“”‘’]/);
+        let extractedDesc = quoteMatch ? quoteMatch[1] : null;
+
+        // 2. DETECÇÃO DE RECORRÊNCIA MENSAL
+        const isMonthlyRecurrent = q.includes('mensalmente') || q.includes('repetindo todos os meses') || q.includes('todos os meses') || q.includes('todo mes') || q.includes('every month') || q.includes('recurring');
+
+        let processableRaw = rawText;
+        if (quoteMatch) processableRaw = processableRaw.replace(quoteMatch[0], ' ');
+        
+        // Remove termos de recorrência da análise de valor/data
+        processableRaw = processableRaw.replace(/\b(mensalmente|repetindo todos os meses|todos os meses|todo mes|every month|recurring)\b/gi, ' ');
+
+        // 3. DEDUPLICAR MESES (em Jan, Fev, etc)
+        const foundMonths = [];
+        for (const [mName, mVal] of Object.entries(monthMap)) {
+          const reg = new RegExp('\\b' + mName + '\\b', 'i');
+          if (q.match(reg)) foundMonths.push(mVal);
+        }
+        const uniqueMonths = [...new Set(foundMonths)];
+
+        // 4. REMOVER O DIA "dia XX" DA BUSCA DE VALOR
+        const dayInMonthMatch = processableRaw.match(/\b(?:dia\s+|day\s+)(\d{1,2})\b/i);
+        if (dayInMonthMatch) {
+          processableRaw = processableRaw.replace(dayInMonthMatch[0], ' ');
+        }
+
+        // 5. EXTRAIR VALOR
+        const amountMatch = processableRaw.match(/(\d+(?:[.,]\d{1,2})?)/);
         const amount = amountMatch ? parseFloat(amountMatch[1].replace(',', '.')) : 0;
 
-        let desc = rawText.replace(/(\d+(?:[.,]\d{1,2})?)/, '').replace(/(lancar|despesa|receita|gasto|ganhei|recebi|salario|paguei|conta|reais|real|debito|entrada|pix|add|expense|income|paid|received|salary|anotar|anote|um|uma)/gi, '').trim();
+        // 6. LIMPAR/PREPARAR DESCRIÇÃO (se não foi capturada por aspas)
+        let desc = extractedDesc;
+        if (!desc) {
+          desc = rawText;
+          if (amountMatch) desc = desc.replace(amountMatch[0], '');
+          if (dayInMonthMatch) desc = desc.replace(dayInMonthMatch[0], '');
+          
+          desc = desc.replace(/\b(lancar|despesas|despesa|receitas|receita|gasto|gastos|ganhei|recebi|salario|paguei|conta|contas|reais|real|debito|entrada|pix|add|expense|income|paid|received|salary|anotar|anote|um|uma|mensalmente|repetindo todos os meses|todos os meses|todo mes|every month|recurring|com|o|titulo|valor|no)\b/gi, '').trim();
+
+          // Remove as aspas se sobraram
+          desc = desc.replace(/["'“”‘’]/g, '');
+
+          // Remove nomes de meses
+          for (const mName of Object.keys(monthMap)) {
+            const reg = new RegExp('\\b' + mName + '\\b', 'gi');
+            desc = desc.replace(reg, '');
+          }
+          // Limpeza final de ruídos
+          desc = desc.replace(/\b(e|do mes|no mes|da semana|na semana)\b|,/gi, '').replace(/\s+/g, ' ').trim();
+        }
+
         if (!desc) desc = isExpense ? (isEN ? "Expense via Agent" : "Despesa via Agente") : (isEN ? "Income via Agent" : "Receita via Agente");
 
-        const date = toDateStr(targetDate);
-        const newId = Date.now().toString();
-        const payload = {
-          id: newId,
-          desc: desc.charAt(0).toUpperCase() + desc.slice(1),
-          amount: amount,
-          date: date,
-          type: isExpense ? 'expense' : 'income',
-          category: (typeof i18n !== 'undefined' && i18n.lang() === 'en') ? 'General' : 'Geral',
-          createdAt: new Date().toISOString()
-        };
+        // 7. DETERMINAR MESES ALVO
+        let targetMonths = uniqueMonths.length > 0 ? uniqueMonths : [targetDate.getMonth()];
 
-        db.ref(`users/${S.currentUser}/transactions/${newId}`).set(payload);
+        if (isMonthlyRecurrent && uniqueMonths.length === 0) {
+          const startMonth = targetDate.getMonth();
+          targetMonths = [];
+          for (let m = startMonth; m <= 11; m++) {
+            targetMonths.push(m);
+          }
+        }
+
+        const createdItems = [];
+        for (const mIdx of targetMonths) {
+          const dObj = new Date(targetDate);
+          dObj.setMonth(mIdx);
+          const date = toDateStr(dObj);
+          const newId = Date.now().toString() + Math.random().toString(36).slice(2, 5);
+
+          const payload = {
+            id: newId,
+            desc: desc.charAt(0).toUpperCase() + desc.slice(1).trim(),
+            amount: amount,
+            date: date,
+            type: isExpense ? 'expense' : 'income',
+            category: (typeof i18n !== 'undefined' && i18n.lang() === 'en') ? 'General' : 'Geral',
+            createdAt: new Date().toISOString()
+          };
+
+          db.ref(`users/${S.currentUser}/transactions/${newId}`).set(payload);
+          createdItems.push(payload);
+        }
 
         const typeIcon = isExpense ? "💸" : "💵";
         const typeName = isExpense ? (isEN ? "Expense" : "Despesa") : (isEN ? "Income" : "Receita");
-        
-        // Format response nicely
         const formattedAmount = new Intl.NumberFormat(locale, { style: 'currency', currency: 'BRL' }).format(amount);
-        
+
+        if (createdItems.length > 1) {
+          return `
+            <div class="agent-card">
+              <div class="agent-card-header">${typeIcon} <b>${createdItems.length} ${isEN ? 'Transactions' : 'Lançamentos'}!</b></div>
+              <div class="agent-card-body">
+                <div><span>📝</span> ${createdItems[0].desc}</div>
+                <div><span>💰</span> <b>${formattedAmount}</b> ${isEN ? 'each' : 'cada'}</div>
+                <div><span>📅</span> ${createdItems.map(it => it.date.split('-')[1]).join(', ')} / ${createdItems[0].date.split('-')[0]}</div>
+              </div>
+            </div>
+          `;
+        }
+
         return `
           <div class="agent-card">
             <div class="agent-card-header">${typeIcon} <b>${typeName} ${isEN ? 'Logged' : 'Lançada'}!</b></div>
             <div class="agent-card-body">
-              <div><span>📝</span> ${payload.desc}</div>
+              <div><span>📝</span> ${createdItems[0].desc}</div>
               <div><span>💰</span> <b>${formattedAmount}</b></div>
-              <div><span>📅</span> ${dateStr}</div>
+              <div><span>📅</span> ${new Date(createdItems[0].date + 'T12:00:00').toLocaleDateString(locale)}</div>
             </div>
           </div>
         `;
       }
 
-      const isCreateEvent = !isHelp && /\b(agendar|agende|agede|marcar|marque|marca|criar|crie|adicionar|adicione|adiciona|p[oó]e|p[oó]r|botar|bota|anotar|anota|schedule|book|remind|set|add)\b/i.test(q);
-      const isListEvents = !isHelp && (q.includes('o que eu tenho') || q.includes('consultar evento') || q.includes('quais eventos') || q.includes('tem evento') || q.includes('eventos marcados') || q.includes('what do i have') || q.includes('list events') || q.includes('show events') || q.includes('my events') || q.includes('any events'));
-      const isDeleteEvent = !isHelp && /\b(cancelar|desmarcar|apagar|excluir|deletar|cancel|delete|remove|erase)\b/i.test(q);
+      const isCreateEvent = (currentIntent === 'resolve_pending') || (!isHelp && /\b(agendar|agende|agede|marcar|marque|marca|criar|crie|adicionar|adicione|adiciona|p[oó]e|p[oó]r|botar|bota|anotar|anota|lembrar|lembre|lembrame|recordar|puxar|schedule|book|remind|set|add)\b/i.test(q));
+      const isListEvents = !isHelp && (q.includes('o que eu tenho') || q.includes('consultar evento') || q.includes('quais eventos') || q.includes('tem evento') || q.includes('eventos marcados') || q.includes('minha agenda') || q.includes('ver minha agenda') || q.includes('agenda de hoje') || q.includes('meus compromissos') || q.includes('what do i have') || q.includes('list events') || q.includes('show events') || q.includes('my events') || q.includes('any events'));
+      const isDeleteEvent = (currentIntent === 'resolve_delete') || (!isHelp && /\b(cancelar|desmarcar|apagar|excluir|deletar|cancel|delete|remove|erase)\b/i.test(q));
 
       if (isCreateEvent) {
         // 1. Extrai Observação (Começa com 'obs' ou 'observacao')
@@ -739,38 +1017,69 @@
           processableText = processableText.substring(0, obsIdx); // remove obs portion from title search
         }
 
-        // 2. Extrai Horário (ex: "as 14h", "14:30", "às 08:00", "at 14:00")
+        // 2. Extrai Horário (ex: "as 14h", "14:30", "às 08:00", "at 14:00", "11:30")
         let evTime = '';
-        const timeRegex = /(?:[aà]s|at)\s?\b(\d{1,2})[h:](\d{2})?\b/i;
-        const timeMatch = processableText.match(timeRegex);
-        if (timeMatch) {
-          const hh = String(timeMatch[1]).padStart(2, '0');
-          const mm = timeMatch[2] ? String(timeMatch[2]).padStart(2, '0') : '00';
-          evTime = `${hh}:${mm}`;
-          processableText = processableText.replace(timeMatch[0], ' ');
+        const timeRegexHM = /\b(\d{1,2}):(\d{2})/;
+        const matchHM = processableText.match(timeRegexHM);
+
+        if (matchHM) {
+          evTime = `${matchHM[1].padStart(2, '0')}:${matchHM[2]}`;
+          processableText = processableText.replace(matchHM[0], ' ');
+        } else {
+          const timeRegexH = /(?:[aà]s|at)\s?\b(\d{1,2})[h:](\d{2})?/i;
+          const timeMatch = processableText.match(timeRegexH);
+          if (timeMatch) {
+            const hh = String(timeMatch[1]).padStart(2, '0');
+            const mm = timeMatch[2] ? String(timeMatch[2]).padStart(2, '0') : '00';
+            evTime = `${hh}:${mm}`;
+            processableText = processableText.replace(timeMatch[0], ' ');
+          }
         }
 
         // 3. Extrai Nome do Evento limpando palavras cruas e ruídos
         const stopWords = [
-          'quero', 'queria', 'gostaria', 'preciso', 'vou', 'poderia', 'agendar', 'agende', 'agede', 'agente', 'marcar', 'marque', 'marca', 'criar', 'crie', 'adicionar', 'adicione', 'lembrar', 'lembre', 'lembra', 'faz', 'um', 'uma', 'evento', 'para', 'o', 'dia', 'amanha', 'amanhã', 'hoje', 'ontem', 'daqui', 'em', 'as', 'às', 'a', 'e', 'no', 'na', 'do', 'da', 'por', 'favor', 'me',
-          'i', 'want', 'would', 'like', 'need', 'can', 'you', 'could', 'please', 'schedule', 'book', 'set', 'add', 'create', 'make', 'remind', 'an', 'appointment', 'for', 'the', 'day', 'tomorrow', 'today', 'yesterday', 'in', 'at', 'on', 'of'
+          'de', 'do', 'da', 'dos', 'das', 'sobre', 'agenda', 'compromisso', 'compromissos', 'quero', 'queria', 'gostaria', 'preciso', 'vou', 'poderia', 'agendar', 'agende', 'agede', 'agente', 'marcar', 'marque', 'marca', 'criar', 'crie', 'adicionar', 'adicione', 'lembrar', 'lembre', 'lembrame', 'recordar', 'puxar', 'lembra', 'mais', 'tarde', 'faz', 'um', 'uma', 'evento', 'para', 'o', 'dia', 'amanha', 'amanhã', 'hoje', 'ontem', 'daqui', 'em', 'as', 'às', 'a', 'e', 'no', 'na', 'por', 'favor', 'me', 'h', 'hrs', 'horas',
+          'i', 'want', 'would', 'like', 'need', 'can', 'you', 'could', 'please', 'schedule', 'book', 'set', 'add', 'create', 'make', 'remind', 'an', 'appointment', 'for', 'the', 'day', 'tomorrow', 'today', 'yesterday', 'in', 'at', 'on', 'of', 'h', 'hr', 'hours'
         ];
 
-        // Remove a data explicita (se houver) do meio do título
-        processableText = processableText.replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g, ' ');
+        // Limpeza extra para remover qualquer sobra de tempo ou data
+        processableText = processableText
+          .replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g, ' ') // data
+          .replace(/\b\d{1,2}[h:]\d{2}\b/g, ' ')               // HH:MM ou HHhMM
+          .replace(/\b\d{1,2}h\b/g, ' ')                        // HHh
+          .replace(/\s+/g, ' ');
 
-        let words = processableText.split(/\s+/);
+        let words = processableText.replace(/-/g, ' ').split(/\s+/);
         words = words.filter(word => {
           let cleanWord = word.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[.,!?]/g, "");
           if (!cleanWord) return false;
+          // Ignora números puros ou com barra (datas)
           if (/^\d{1,4}$/.test(cleanWord) || cleanWord.includes('/')) return false;
           return !stopWords.includes(cleanWord);
         });
 
         let title = words.join(' ').trim();
         // Se após a limpeza sobrar muito pouco, usamos um título padrão
-        if (!title || title.length < 2) title = (typeof i18n !== 'undefined' && i18n.lang() === 'en') ? 'Appointment' : 'Compromisso';
-        else title = title.charAt(0).toUpperCase() + title.slice(1);
+        const isStandardFallback = !title || title.length < 2;
+
+        // Se viemos de um fluxo pendente, restauramos o título do passado
+        if (currentIntent === 'resolve_pending' && mem.pendingEvent) {
+          title = mem.pendingEvent.title;
+        } else {
+          if (isStandardFallback) title = (typeof i18n !== 'undefined' && i18n.lang() === 'en') ? 'Appointment' : 'Compromisso';
+          else title = title.charAt(0).toUpperCase() + title.slice(1);
+        }
+
+        // VALIDAÇÃO DE DATA: Se o usuário não informou data (explícita ou relativa) e não disse "hoje"
+        if (!foundRelativeDate && !q.includes('hoje') && !q.includes('today')) {
+          mem.pendingEvent = { title: title };
+          return isEN
+            ? `I've noted you want to schedule: **${title}**. But for which day? (Please inform the date)`
+            : `Entendido, você quer agendar: **${title}**. Mas para qual dia? (Por favor, me informe a data ou diga 'amanhã', 'segunda', etc)`;
+        }
+
+        // Se chegamos aqui e agendamos, limpamos a memória pendente
+        mem.pendingEvent = null;
 
         const payload = {
           title: title,
@@ -786,7 +1095,15 @@
         db.ref(`users/${S.currentUser}/events/${newId}`).set(payload);
 
 
-        // Build response
+        // Response
+        if (currentCustomResponse) {
+          return processTemplate(currentCustomResponse, {
+            title: title,
+            date: toDateStr(targetDate),
+            time: evTime
+          });
+        }
+
         const respTitle = isEN ? `Appointment Scheduled!` : `Compromisso Agendado!`;
         const timeLabel = isEN ? `Time:` : `Horário:`;
         const obsLabel = isEN ? `Note:` : `Obs:`;
@@ -822,9 +1139,27 @@
         const targetDateStr = toDateStr(targetDate);
         let dailyEvents = S.events.filter(e => e.date === targetDateStr);
 
-        if (dailyEvents.length === 0) return isEN
-          ? `I found no events for ${daySuffix} to delete.`
-          : `Não encontrei eventos marcados para ${daySuffix} para eu conseguir cancelar.`;
+        // Se viemos de uma resolução de lista pendente
+        if (currentIntent === 'resolve_delete' && mem.pendingDeleteList) {
+          if (q.includes('todos') || q.includes('all')) {
+            mem.pendingDeleteList.forEach(item => {
+              const path = item.itemType === 'transaction' ? 'transactions' : 'events';
+              db.ref(`users/${S.currentUser}/${path}/${item.id}`).remove();
+            });
+            const count = mem.pendingDeleteList.length;
+            mem.pendingDeleteList = null;
+            return isEN ? `Clean sweep! ${count} items deleted. 🧹` : `Limpeza feita! ${count} itens excluídos. 🧹`;
+          }
+          const idx = parseInt(q) - 1;
+          if (mem.pendingDeleteList[idx]) {
+            const item = mem.pendingDeleteList[idx];
+            const path = item.itemType === 'transaction' ? 'transactions' : 'events';
+            db.ref(`users/${S.currentUser}/${path}/${item.id}`).remove();
+            mem.pendingDeleteList = null;
+            if (currentCustomResponse) return processTemplate(currentCustomResponse, { title: item.title, date: item.date });
+            return isEN ? `Successfully deleted: "${item.title}"` : `Excluído com sucesso: "${item.title}"`;
+          }
+        }
 
         const stopWordsDel = isEN
           ? ['i', 'want', 'please', 'cancel', 'delete', 'remove', 'erase', 'the', 'a', 'an', 'event', 'appointment', 'on', 'day', 'of', 'from', 'tomorrow', 'today', 'yesterday', 'for', 'me']
@@ -832,20 +1167,63 @@
         let words = rawText.split(/\s+/).map(w => w.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[.,!?]/g, ""));
         let searchTitle = words.filter(w => !stopWordsDel.includes(w) && !/^\d/.test(w) && !w.includes('/')).join(' ').trim();
 
-        if (searchTitle.length >= 2) {
-          const matchedEvents = dailyEvents.filter(e => e.title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(searchTitle));
-          if (matchedEvents.length > 0) dailyEvents = matchedEvents;
+        let results = [];
+        if (foundRelativeDate) {
+          const targetDateStr = toDateStr(targetDate);
+          results = S.events.filter(e => e && e.date === targetDateStr).map(e => ({ ...e, itemType: 'event' }));
+          if (searchTitle.length >= 2) {
+            results = results.filter(e => (e.title || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(searchTitle));
+          }
+        } else if (searchTitle.length >= 2) {
+          // Global search (events + transactions)
+          const evs = S.events.filter(e => e && (e.title || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(searchTitle)).map(e => ({ ...e, itemType: 'event' }));
+          const trans = S.transactions.filter(t => t && (t.desc || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(searchTitle)).map(t => ({ ...t, itemType: 'transaction', title: t.desc }));
+          results = [...evs, ...trans];
+        } else {
+          // No date, no term -> try today's events as fallback
+          results = S.events.filter(e => e.date === toDateStr(new Date())).map(e => ({ ...e, itemType: 'event' }));
         }
 
-        if (dailyEvents.length === 1) {
-          db.ref(`users/${S.currentUser}/events/${dailyEvents[0].id}`).remove();
+        if (results.length === 0) return isEN
+          ? `I found no items to delete${searchTitle ? ' matching "' + searchTitle + '"' : ''}.`
+          : `Não encontrei itens para excluir${searchTitle ? ' contendo "' + searchTitle + '"' : ''}.`;
+
+
+        if (results.length === 1) {
+          const it = results[0];
+          const path = it.itemType === 'transaction' ? 'transactions' : 'events';
+          db.ref(`users/${S.currentUser}/${path}/${it.id}`).remove();
+          const displayDate = it.date.split('-').reverse().join('/');
+          if (currentCustomResponse) return processTemplate(currentCustomResponse, { title: it.title, date: it.date });
           return isEN
-            ? `Done! I cancelled "${dailyEvents[0].title}" scheduled for ${daySuffix}. 🗑️`
-            : `Feito! Cancelei "${dailyEvents[0].title}" que estava marcado para ${daySuffix}. 🗑️`;
+            ? `Done! I deleted "${it.title}" (${displayDate}). 🗑️`
+            : `Feito! Excluí "${it.title}" (${displayDate}). 🗑️`;
         } else {
-          return isEN
-            ? `You have ${dailyEvents.length} similar events on ${daySuffix} (e.g. ${dailyEvents.map(e => e.title).join(', ')}). Go back to the main calendar and delete the correct one manually.`
-            : `Você tem ${dailyEvents.length} eventos parecidos ${daySuffix} (Ex: ${dailyEvents.map(e => e.title).join(', ')}). Vá até a tela principal da agenda clicando em voltar e apague manualmente o correto!`;
+          mem.pendingDeleteList = results;
+          const header = isEN ? `Items Found` : `Itens encontrados`;
+          const listHtml = results.map((e, i) => {
+            const icon = e.itemType === 'transaction' ? '💸' : '📅';
+            const dateStr = e.date.split('-').reverse().join('/');
+            return `<li><b>${i + 1}.</b> ${icon} ${e.title} <small>(${dateStr})</small></li>`;
+          }).join('');
+          const footerMsg = isEN
+            ? "Reply with the **number** to delete one, or type **'delete all'**."
+            : "Responda com o **número** para excluir um, ou diga **'excluir todos'**.";
+
+          return `
+            <div class="agent-card">
+              <div class="agent-card-header">⚠️ <b>${header}</b></div>
+              <div class="agent-card-body">
+                <p style="margin-bottom: 8px;">${isEN ? `I found ${results.length} items:` : `Encontrei ${results.length} itens:`}</p>
+                <ul style="padding-left: 0; margin-bottom: 12px; font-size: 0.85rem; opacity: 0.85; line-height: 1.6; list-style: none;">
+                  ${listHtml}
+                </ul>
+                <div style="font-size: 0.9rem; color: var(--primary); font-weight: 500;">
+                  <span>💡</span> ${footerMsg}
+                </div>
+              </div>
+            </div>
+          `;
         }
       }
 
@@ -1024,6 +1402,46 @@
         if (!S.userScale) return isEN
           ? "To check your schedule, you need to set it up in the ViewGo agenda by clicking the schedule button at the top."
           : "Para eu consultar sua escala, você precisa configurá-la na agenda ViewGo clicando no botão de escala no topo da agenda.";
+
+        const isFullScaleRequest = forcedFullScale || q === 'escala de servico' || q === 'escala da semana' || q === 'ver escala' || q === 'minha escala' || q === 'escala' || q === 'consulta escala';
+
+        if (isFullScaleRequest) {
+          let scan = new Date();
+          let rows = "";
+          for (let i = 0; i < 7; i++) {
+            const isOff = checkOff(scan);
+            const isToday = i === 0;
+            const dateFmt = scan.toLocaleDateString(locale, { weekday: 'short', day: '2-digit', month: '2-digit' });
+            const status = isOff ? (isEN ? "FOLGA 🏖️" : "FOLGA 🏖️") : (isEN ? "TRABALHO 🚀" : "TRABALHO 🚀");
+            const color = isOff ? "#10b981" : "#ef4444"; // Semantic colors
+            const bg = isToday ? "rgba(var(--primary-rgb), 0.05)" : "transparent";
+
+            rows += `
+              <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px 14px; background:${bg}; border-bottom: 1px solid var(--border); font-size: 0.95rem; gap: 10px;">
+                <span style="text-transform: capitalize; font-weight: ${isToday ? '600' : '400'}; color: var(--text1); white-space: nowrap; width:100%;" >${dateFmt}${isToday ? ' (Hoje)' : ''}</span>
+                <span style="color: ${color}; font-weight: 700; font-size: 0.85rem; text-align: right; white-space: nowrap; width:100%;">${status}</span>
+              </div>
+            `;
+            scan.setDate(scan.getDate() + 1);
+          }
+
+          const header = isEN ? "7-Day Schedule Summary" : "Resumo da Escala (7 Dias)";
+          const customIntro = currentCustomResponse ? `<div style="padding: 12px 15px; border-bottom: 1px solid var(--border); font-size: 0.95rem;">${processTemplate(currentCustomResponse)}</div>` : "";
+
+          return `
+            <div class="agent-card">
+              <div class="agent-card-header">📅 <b>${header}</b></div>
+              ${customIntro}
+              <div class="agent-card-body" style="padding: 0;">
+                ${rows}
+                <div style="padding: 10px; text-align: center; font-size: 0.75rem; opacity: 0.6;">
+                  ${isEN ? "Plan your rest and stay focused! 💪" : "Planeje seu descanso e bom serviço! 💪"}
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
         const isOff = checkOff(targetDate);
         const respFolga = isEN
           ? [`Great news! ${daySuffix} you are OFF! 🎉`, `${daySuffix} is your rest day! 😎`, `Celebrate! ${daySuffix} you have the day off!`]
@@ -1034,7 +1452,11 @@
         const perguntouFolga = isEN
           ? (q.includes('off') || q.includes('rest') || q.includes('free') || !q.includes('work'))
           : (q.includes('folga') || q.includes('livre') || q.includes('descans') || !q.includes('trabalho'));
-        return perguntouFolga ? (isOff ? rand(respFolga) : rand(respTrampo)) : (!isOff ? rand(respTrampo) : rand(respFolga));
+        const baseResp = perguntouFolga ? (isOff ? rand(respFolga) : rand(respTrampo)) : (!isOff ? rand(respTrampo) : rand(respFolga));
+        if (currentCustomResponse) {
+          return processTemplate(currentCustomResponse, { date: dateStr }) + "\n\n" + baseResp;
+        }
+        return baseResp;
       }
 
       // 5. KNOWLEDGE BASE (bilingual)
@@ -1432,6 +1854,37 @@
         : "Ainda não tenho um bizu sobre isso, mas estou aprendendo! Quer agendar algo ou ver sua escala?";
     }
 
+
+    function processTemplate(tpl, data = {}) {
+      if (!tpl) return null;
+      const _isEN = getLang() === 'en';
+      let out = tpl;
+      const userName = (S.userProfile && S.userProfile.name) ? S.userProfile.name : (_isEN ? 'Friend' : 'Comandante');
+      out = out.replace(/{userName}/g, userName);
+
+      // Converte YYYY-MM-DD para DD/MM/YYYY se necessário
+      let d = data.date || "";
+      if (d && d.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const [y, m, day] = d.split('-');
+        d = `${day}/${m}/${y}`;
+      }
+
+      out = out.replace(/{title}/g, data.title || "");
+      out = out.replace(/{date}/g, d);
+      out = out.replace(/{time}/g, data.time || "");
+      out = out.replace(/{amount}/g, data.amount || "");
+      out = out.replace(/{month}/g, data.month || "");
+      out = out.replace(/{count}/g, data.count || "");
+
+      // Limpeza de " às " ou " at " se o tempo for vazio
+      if (!data.time || data.time === '--:--') {
+        out = out.replace(/\s*(?:[àa]s|at)\s*--:--/gi, '');
+        out = out.replace(/\s*(?:[àa]s|at)\s*$/gi, '');
+        out = out.replace(/\s*(?:[àa]s|at)\s+(?=[.!?]|$)/gi, '');
+      }
+
+      return out.trim();
+    }
 
     function rand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 

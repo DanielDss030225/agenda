@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Configuração Agente AI - ViewGo Admin</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <link rel="stylesheet" href="style.css" />
+    <style>
+        body { overflow: auto !important; background: var(--bg); }
+        .admin-container { max-width: 1000px; margin: 0 auto; padding: 24px 16px; }
+        .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+        .admin-logo { display: flex; align-items: center; gap: 12px; }
+        .admin-logo span { font-size: 1.4rem; font-weight: 700; color: var(--text); }
+        
+        .intent-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.2s;
+            position: relative;
+        }
+        .intent-card:hover { border-color: var(--primary); box-shadow: var(--shadow); }
+        
+        .intent-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+        .intent-trigger { font-weight: 700; color: var(--primary); font-size: 1.1rem; }
+        .intent-action-badge {
+            background: var(--primary-lt);
+            color: var(--primary);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .intent-response {
+            background: var(--surface2);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: var(--text);
+            font-family: inherit;
+            white-space: pre-wrap;
+            margin-top: 10px;
+            border-left: 3px solid var(--primary);
+        }
+
+        .variable-tag {
+            color: #ec4899;
+            font-weight: 700;
+            background: rgba(236, 72, 153, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            border: 1px solid rgba(236, 72, 153, 0.2);
+        }
+        .variable-tag:hover { background: rgba(236, 72, 153, 0.2); }
+
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-family: inherit;
+        }
+        
+        .actions-toolbar {
+            position: sticky;
+            top: 20px;
+            z-index: 100;
+            margin-bottom: 24px;
+            display: flex;
+            gap: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="admin-container">
+        <header class="admin-header">
+            <div class="admin-logo">
+                <span class="material-symbols-outlined" style="font-size: 36px; color: var(--primary);">smart_toy</span>
+                <span>Configuração do Agente Bizu</span>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-primary" onclick="openCreateModal()">
+                    <span class="material-symbols-outlined">add</span>
+                    Novo Gatilho
+                </button>
+                <button class="btn btn-outline" onclick="window.location.href='adm.html'">
+                    <span class="material-symbols-outlined">dashboard</span>
+                    Admin Geral
+                </button>
+            </div>
+        </header>
+
+        <div id="intents-list">
+            <!-- Gatilhos carregados aqui -->
+            <div style="text-align: center; padding: 40px; opacity: 0.5;">
+                <span class="material-symbols-outlined" style="font-size: 48px;">hourglass_empty</span>
+                <p>Carregando inteligência do agente...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Criação/Edição -->
+    <div id="intent-modal" class="modal-overlay hidden">
+        <div class="modal-sheet" style="max-width: 600px;">
+            <div class="modal-handle"></div>
+            <div class="modal-header">
+                <div id="modal-title" style="font-weight: 800; font-size: 1.2rem;">Configurar Ação do Agente</div>
+                <button class="btn btn-ghost btn-icon" onclick="closeModal()">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="modal-body modal-scroll">
+                <div class="form-group">
+                    <label>Gatilho (O que o usuário escreve ou envia)</label>
+                    <input type="text" id="field-trigger" placeholder="Ex: ver minha agenda, consulta escala, piada">
+                    <p style="font-size: 0.75rem; color: var(--text3); margin-top: 4px;">Pode ser uma frase curta. O sistema buscará correspondências próximas.</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Ação Principal do Agente</label>
+                    <select id="field-action" onchange="toggleActionFields()">
+                        <option value="PLAIN_TEXT">Responder apenas Texto (Knowledge Base)</option>
+                        <option value="CREATE_EVENT">Agendar Evento/Compromisso</option>
+                        <option value="LIST_EVENTS">Listar Compromissos do Dia</option>
+                        <option value="DELETE_EVENT">Cancelar/Excluir Compromisso</option>
+                        <option value="SCALE_CHECK">Consultar Escala (7 dias)</option>
+                        <option value="SCALE_DATE_CHECK">Consultar Folga em Data Específica</option>
+                        <option value="NEXT_OFF">Consultar Próxima Folga</option>
+                        <option value="FINANCIAL_LOG">Lançar Finanças (Receita/Despesa)</option>
+                        <option value="SYSTEM_JOKE">Contar uma Piada do Sistema</option>
+                        <option value="SYSTEM_MOVIE">Sugerir Filme do Sistema</option>
+                        <option value="SYSTEM_BIBLE">Mostrar Versículo do Dia</option>
+                        <option value="SYSTEM_MOTIVATION">Frase de Motivação</option>
+                        <option value="SYSTEM_HELP">Mostrar Ajuda/Comandos</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label id="label-response">Resposta Customizada (Opcional para ações automáticas)</label>
+                    <textarea id="field-response" rows="4" placeholder="Sua resposta aqui..."></textarea>
+                    <p style="font-size: 0.75rem; color: var(--text3); margin-top: 6px;">Clique nas variáveis abaixo para inserir na resposta:</p>
+                    <div id="variable-hints" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px;">
+                        <span class="variable-tag" onclick="insertVar('{title}')">{title}</span>
+                        <span class="variable-tag" onclick="insertVar('{date}')">{date}</span>
+                        <span class="variable-tag" onclick="insertVar('{time}')">{time}</span>
+                        <span class="variable-tag" onclick="insertVar('{amount}')">{amount}</span>
+                        <span class="variable-tag" onclick="insertVar('{userName}')">{userName}</span>
+                        <span class="variable-tag" onclick="insertVar('{count}')">{count}</span>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 12px; margin-top: 24px;">
+                    <button class="btn btn-primary flex-1" onclick="saveIntent()">
+                        <span class="material-symbols-outlined">save</span>
+                        Salvar Configuração
+                    </button>
+                    <button id="btn-delete" class="btn btn-danger-ghost hidden" onclick="deleteIntent()">
+                        <span class="material-symbols-outlined">delete</span>
+                        Apagar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <script src="admin_agent.js"></script>
+</body>
+</html>
