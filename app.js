@@ -3460,7 +3460,7 @@ window.openTransactionForm = function (d = null, trans = null) {
     if (recArea && btnIgnore) {
       recArea.classList.remove('hidden');
       // Toggle texto conforme estado e recorrência
-      const isIgnored = trans.excludedDates && trans.excludedDates[$('trans-date').value];
+      const isIgnored = trans.excludedDates && trans.excludedDates[S.editingOccurrenceDate];
       const recType = (trans.recurrence && trans.recurrence !== 'none') ? trans.recurrence : 'daily';
       const i18nKey = (isIgnored ? 'consider_instance_' : 'ignore_instance_') + recType;
 
