@@ -46,6 +46,37 @@ const S = {
   verifiedPhone: null
 };
 
+window.showToast = function(message, duration = 2000) {
+  const toast = document.createElement('div');
+  toast.textContent = message;
+
+  Object.assign(toast.style, {
+    position: 'fixed',
+    bottom: '20px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    background: '#4CAF50FF',
+    color: '#fff',
+    padding: '12px 20px',
+    borderRadius: '8px',
+    fontSize: '14px',
+    zIndex: 9999,
+    opacity: '0',
+    transition: 'opacity .3s'
+  });
+
+  document.body.appendChild(toast);
+
+  requestAnimationFrame(() => {
+    toast.style.opacity = '1';
+  });
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+};
+
 // ======================== STATS TRACKING ========================
 function toDateStr(d) {
   if (!d) return '';
@@ -1010,6 +1041,7 @@ async function addEvent(data) {
   const ev = { id: uid(), createdAt: new Date().toISOString(), ...data };
   S.events.push(ev);
   await userRef(`events/${ev.id}`).set(ev);
+  showToast(typeof i18n !== 'undefined' ? i18n.t('event_added_toast') : 'Evento adicionado');
 }
 
 async function updateEvent(id, data) {
@@ -1594,6 +1626,17 @@ function setView(mode) {
   $('btn-view-year').classList.toggle('active', mode === 'year');
   $('btn-view-ai').classList.toggle('active', mode === 'ai');
 
+  const btnHome = $('btn-go-home');
+  const btnAgent = $('btn-agent-side');
+  if (btnHome) {
+    btnHome.classList.toggle('btn-primary', mode === 'month');
+    btnHome.classList.toggle('btn-outline', mode !== 'month');
+  }
+  if (btnAgent) {
+    btnAgent.classList.toggle('btn-primary', mode === 'ai');
+    btnAgent.classList.toggle('btn-outline', mode !== 'ai');
+  }
+
   refreshCalendar();
 }
 
@@ -2172,6 +2215,7 @@ async function saveScale() {
   showLoading('loading_saving');
   await saveProfile();
   hideLoading();
+  showToast(typeof i18n !== 'undefined' ? i18n.t('scale_saved_toast') : 'Escala salva com sucesso');
 
   $('scale-display').textContent = S.userScale.display;
   show('scale-bar');
@@ -2594,6 +2638,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (iconHidden) iconHidden.classList.add('hidden');
       if (shortVisible) shortVisible.classList.remove('hidden');
       if (shortHidden) shortHidden.classList.add('hidden');
+      showToast('Show Finance Bar');
     } else {
       if (container) container.style.display = 'none';
       if (aiContainer) aiContainer.style.display = 'none';
@@ -2601,6 +2646,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (iconHidden) iconHidden.classList.remove('hidden');
       if (shortVisible) shortVisible.classList.add('hidden');
       if (shortHidden) shortHidden.classList.remove('hidden');
+      showToast('Close Finance Bar');
+
     }
     localStorage.setItem('agbizu_show_global_finance', S.showGlobalFinance);
   };
@@ -2609,9 +2656,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if ($('btn-toggle-global-finance')) {
     $('btn-toggle-global-finance').onclick = () => {
+
       S.showGlobalFinance = !S.showGlobalFinance;
       window.updateGlobalFinanceVisibility();
       play('click');
+      toggleSideMenu(false);
+
+
     };
   }
 
@@ -2726,7 +2777,10 @@ document.addEventListener('DOMContentLoaded', () => {
           finalData.date = original.date;
         }
         const idx = S.transactions.findIndex(t => t.id === transId);
-        if (idx !== -1) S.transactions[idx] = finalData; else S.transactions.push(finalData);
+        if (idx !== -1) S.transactions[idx] = finalData; else {
+          S.transactions.push(finalData);
+          showToast(typeof i18n !== 'undefined' ? i18n.t('finance_added_toast') : 'Nova finança adicionada');
+        }
         await userRef(`transactions/${transId}`).set(finalData);
         finishTransSave();
       };

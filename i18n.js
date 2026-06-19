@@ -235,6 +235,9 @@ const TRANSLATIONS = {
     custom_scale: 'Escala Custom',
     scale_configure_later: 'Configurar depois',
     finance_month: 'Resumo do Mês',
+    event_added_toast: 'Evento adicionado',
+    finance_added_toast: 'Nova finança adicionada',
+    scale_saved_toast: 'Escala salva com sucesso',
 
     // ---- Holidays ----
     holidays: {
@@ -560,6 +563,9 @@ const TRANSLATIONS = {
     custom_scale: 'Custom Schedule',
     scale_configure_later: 'Set up later',
     finance_month: 'Month Summary',
+    event_added_toast: 'Event added',
+    finance_added_toast: 'New finance added',
+    scale_saved_toast: 'Schedule saved successfully',
 
     // ---- Holidays ----
     holidays: {
