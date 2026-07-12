@@ -634,69 +634,8 @@
     </div>
   </div>
 
-  <!-- ===== VERIFICATION SCREEN (New) ===== -->
-  <div id="verification-screen" class="screen hidden">
-    <div class="login-wrap">
-      <div class="login-hero">
-        <div class="verification-anim-wrap">
-          <div class="verification-ripple"></div>
-          <div class="verification-icon-box">
-            <span class="material-symbols-outlined">verified_user</span>
-          </div>
-        </div>
-        <div class="login-title">Verificação de Conta</div>
-        <p class="login-sub">Para receber notificações e lembretes em tempo real valide seu WhatsApp.</p>
-      </div>
-
-      <div class="login-footer">
-        <div class="login-form">
-          <div style="text-align: center; margin-bottom: 24px;">
-            <div style="font-size: 1.5rem; color: var(--text); margin-bottom: 8px;">Validar WhatsApp</div>
-            <p style="font-size: 0.9rem; color: var(--text2);">Enviaremos um código para o número informado.</p>
-          </div>
-
-          <div class="field-group">
-            <label class="field-label" data-i18n="verify_phone_label">Número WhatsApp (Ex: 55 + DDD 2 dígitos +
-              Número)</label>
-            <div style="display: flex; gap: 8px;">
-              <input type="tel" id="verify-phone" class="field-input" placeholder="Ex: 5511999999999"
-                data-i18n="verify_phone_placeholder" data-i18n-attr="placeholder" style="flex: 1;">
-              <button id="btn-request-verify-v2" class="btn btn-outline btn-sm" onclick="requestVerificationV2()">Enviar
-                Código</button>
-            </div>
-            <p id="verify-status" class="hidden"
-              style="font-size: 0.75rem; color: #16a34a;  margin-top: 8px; text-align: center;"></p>
-          </div>
-
-          <div id="group-verify-code-v2" class="field-group hidden"
-            style="background: var(--primary-lt); padding: 20px; border-radius: 18px; border: 1.5px dashed var(--primary);">
-            <label class="field-label"
-              style="font-size: 0.85rem; text-align: center; display: block; margin-bottom: 12px;">Digite o código de 4
-              dígitos</label>
-            <div style="display: flex; gap: 12px; justify-content: center;">
-              <input type="text" id="verify-code-v2" class="field-input" placeholder="0000" maxlength="4"
-                style="width: 120px; text-align: center; letter-spacing: 6px;  font-size: 1.2rem; background: white;">
-              <button class="btn btn-primary" onclick="confirmVerificationV2()">Validar</button>
-            </div>
-          </div>
-
-          <div id="verification-actions" class="form-actions hidden" style="margin-top: 10px;">
-            <button class="btn btn-primary btn-full btn-lg" onclick="saveVerificationV2()"
-              style="height: 54px; font-size: 1.05rem;">
-              <span class="material-symbols-outlined">check_circle</span>
-              Concluir e Acessar Sistema
-            </button>
-          </div>
-
-          <div style="text-align: center; margin-top: 20px;">
-            <button class="btn btn-ghost" onclick="logout()" style="font-size: 0.8rem; color: var(--text3);">
-              <span class="material-symbols-outlined" style="font-size: 18px;">logout</span>
-              Sair da Conta
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+  <!-- ===== VERIFICATION SCREEN (disabled — phone no longer required) ===== -->
+  <div id="verification-screen" class="screen hidden" style="display:none !important;">
   </div>
 
   <!-- ===== MAIN APP ===== -->
@@ -1637,33 +1576,9 @@
           <label class="field-label" data-i18n="login_name_label">Nome Completo</label>
           <input type="text" id="settings-name" class="field-input">
         </div>
-        <div class="field-group">
-          <label class="field-label" data-i18n="settings_whatsapp_label">WhatsApp (Ex: 55 + DDD 2 dígitos +
-            Número)</label>
-          <div style="display: flex; gap: 8px;">
-            <input type="tel" id="settings-phone" class="field-input" placeholder="Ex: 5511999999999"
-              data-i18n="verify_phone_placeholder" data-i18n-attr="placeholder" style="flex: 1;">
-            <button id="btn-request-verify" class="btn btn-outline btn-sm"
-              style="white-space: nowrap;">Verificar</button>
-          </div>
-          <p id="settings-phone-hint" style="font-size: 0.7rem; color: var(--text3); margin-top: 4px;">Utilizado para
-            envio de notificações automáticas via WhatsApp.</p>
-          <p id="settings-verify-status" class="hidden" style="font-size: 0.7rem; color: #16a34a;  margin-top: 2px;">
-          </p>
-        </div>
 
-        <div id="group-settings-verify-code" class="field-group hidden"
-          style="background: var(--surface2); padding: 12px; border-radius: 8px; border: 1px dashed var(--primary-lt);">
-          <label class="field-label" style="font-size: 0.75rem;">Digite o código enviado ao seu WhatsApp</label>
-          <div style="display: flex; gap: 8px;">
-            <input type="text" id="settings-verify-code" class="field-input" placeholder="0000" maxlength="4"
-              style="text-align: center; letter-spacing: 4px; ">
-            <button id="btn-confirm-verify" class="btn btn-primary btn-sm">Validar</button>
-          </div>
-        </div>
-
-        <div id="settings-form-actions" class="form-actions hidden">
-          <button id="btn-save-settings" class="btn btn-primary btn-full" data-i18n="btn_save" disabled>Salvar
+        <div id="settings-form-actions" class="form-actions">
+          <button id="btn-save-settings" class="btn btn-primary btn-full" data-i18n="btn_save">Salvar
             Alterações</button>
         </div>
       </div>

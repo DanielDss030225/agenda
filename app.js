@@ -597,13 +597,16 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
       const phoneNumber = data.phoneNumber || '';
 
-      // If new user, initialize basic entry
+      // If new user, initialize basic entry (only if not already written by the register flow)
       if (!snap.exists()) {
         await userRef().update({
           email: user.email,
           displayName: user.displayName || '',
           createdAt: new Date().toISOString()
         });
+      } else if (!data.displayName && user.displayName) {
+        // Sync auth profile name if Firebase node has an empty one
+        await userRef().update({ displayName: user.displayName });
       }
 
       localStorage.setItem('agbizu_session', user.uid);
@@ -617,15 +620,10 @@ firebase.auth().onAuthStateChanged(async (user) => {
         }
       }
 
-      // BLOCKING LOGIC: User MUST have a phone number to use the system
-      if (!phoneNumber) {
-        console.log("Account Verification Required.");
-        showVerificationScreen();
-      } else {
-        S.verifiedPhone = phoneNumber;
-        S.isPhoneVerified = true;
-        initApp();
-      }
+      // Phone number is optional — go straight to the app
+      S.verifiedPhone = phoneNumber || null;
+      S.isPhoneVerified = !!phoneNumber;
+      initApp();
 
     } catch (e) {
       console.error("Error fetching user profile:", e);
@@ -785,7 +783,15 @@ document.getElementById('login-form').onsubmit = async (e) => {
     showLoading('loading_connecting');
     try {
       const result = await firebase.auth().createUserWithEmailAndPassword(email, pass);
+      // Update the auth profile first
       await result.user.updateProfile({ displayName: name });
+      // Then immediately write to the database so onAuthStateChanged
+      // won't race against updateProfile and save an empty displayName
+      await firebase.database().ref(`users/${result.user.uid}`).update({
+        email: result.user.email,
+        displayName: name,
+        createdAt: new Date().toISOString()
+      });
     } catch (err) {
       hideLoading();
       if (err.code === 'auth/email-already-in-use') {
@@ -3091,7 +3097,6 @@ document.addEventListener('DOMContentLoaded', () => {
   window.saveSettings = async function () {
     if (!S.currentUser) return;
     const name = $('settings-name').value.trim();
-    const phone = $('settings-phone').value.trim();
     const statusEl = $('settings-verify-status');
 
     if (!name) {
@@ -3103,29 +3108,15 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    if (phone !== S.verifiedPhone && phone !== "") {
-      if (statusEl) {
-        statusEl.textContent = "Por favor, valide seu novo número de WhatsApp antes de salvar.";
-        statusEl.style.color = "#dc2626";
-        statusEl.classList.remove('hidden');
-      }
-      return;
-    }
-
     showLoading('loading_saving');
     play('click');
     try {
       await userRef().update({
-        displayName: name,
-        phoneNumber: phone
+        displayName: name
       });
       closeModal('modal-settings');
       hideLoading();
       createToast({ title: "Sucesso", message: "Configurações salvas!", type: "success" });
-
-      // Se limpou o telefone, vai ser expulso pelo observer ou reload
-      if (!phone) window.location.reload();
-
     } catch (err) {
       hideLoading();
       if (statusEl) {
@@ -3142,22 +3133,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if ($('btn-request-verify')) $('btn-request-verify').onclick = window.requestVerification;
   if ($('btn-confirm-verify')) $('btn-confirm-verify').onclick = window.confirmVerification;
 
-  // Lógica para detectar mudança no telefone e esconder o botão de salvar
-  if ($('settings-phone')) {
-    $('settings-phone').oninput = () => {
-      const currentVal = $('settings-phone').value.trim();
-      const actions = $('settings-form-actions');
-      if (!actions) return;
-
-      // Se estiver vazio OU for diferente do verificado, esconde o botão
-      if (currentVal === "" || (currentVal !== S.verifiedPhone)) {
-        actions.classList.add('hidden');
-      } else {
-        actions.classList.remove('hidden');
-        if ($('btn-save-settings')) $('btn-save-settings').disabled = false;
-      }
-    };
-  }
+  // Phone field no longer controls save-button visibility
 
   if ($('btn-add-fin-from-day')) {
     $('btn-add-fin-from-day').onclick = () => {
