@@ -2464,6 +2464,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (inp) {
       inp.onfocus = () => loginScr.classList.add('focused');
       // Removido o loginScr.classList.remove('focused') no onblur para manter o topo oculto
+      // Desabilita navegação por TAB entre inputs
+      inp.addEventListener('keydown', (e) => {
+        if (e.key === 'Tab') {
+          e.preventDefault();
+        }
+      });
     }
   });
 
