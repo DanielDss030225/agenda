@@ -934,10 +934,22 @@ function getEventsForDate(d) {
     }
 
     // Recurring Logic
-    if (targetDate < start) return;
+    if (targetDate < start) {
+      if (e.overrides && e.overrides[targetStr]) {
+        let finalItem = { ...e, isIgnored: !!(e.excludedDates && e.excludedDates[targetStr]), occurrenceDate: targetStr, ...e.overrides[targetStr] };
+        result.push(finalItem);
+      }
+      return;
+    }
     // In recurring events, endDate acts as the series end if it exists. 
     // If the occurrence is on targetDate, we verify if targetDate <= end.
-    if (e.endDate && targetDate > end) return;
+    if (e.endDate && targetDate > end) {
+      if (e.overrides && e.overrides[targetStr]) {
+        let finalItem = { ...e, isIgnored: !!(e.excludedDates && e.excludedDates[targetStr]), occurrenceDate: targetStr, ...e.overrides[targetStr] };
+        result.push(finalItem);
+      }
+      return;
+    }
 
     let isOccurrence = false;
     if (e.recurrence === 'daily') isOccurrence = true;
@@ -952,7 +964,9 @@ function getEventsForDate(d) {
       isOccurrence = targetDate.getDate() === start.getDate() && targetDate.getMonth() === start.getMonth();
     }
 
-    if (isOccurrence) {
+    const hasOverrideOnTarget = !!(e.overrides && e.overrides[targetStr]);
+
+    if (isOccurrence || hasOverrideOnTarget) {
       let finalItem = { ...e, isIgnored: !!(e.excludedDates && e.excludedDates[targetStr]), occurrenceDate: targetStr };
       // Aplicar sobreposição se existir para este dia
       if (e.overrides && e.overrides[targetStr]) {
@@ -983,6 +997,14 @@ function getTransactionsForDate(d) {
     }
 
     if (!t.recurrence || t.recurrence === 'none') return;
+
+    if (targetDate < start) {
+      if (t.overrides && t.overrides[targetStr]) {
+        let finalItem = { ...t, isIgnored: !!(t.excludedDates && t.excludedDates[targetStr]), occurrenceDate: targetStr, ...t.overrides[targetStr] };
+        result.push(finalItem);
+      }
+      return;
+    }
 
     let isOccurrence = false;
     let currentInstallment = 0;
@@ -1032,7 +1054,9 @@ function getTransactionsForDate(d) {
       }
     }
 
-    if (isOccurrence) {
+    const hasOverrideOnTarget = !!(t.overrides && t.overrides[targetStr]);
+
+    if (isOccurrence || hasOverrideOnTarget) {
       let finalItem = { ...t, isIgnored: !!(t.excludedDates && t.excludedDates[targetStr]), occurrenceDate: targetStr, currentInstallment };
       if (t.overrides && t.overrides[targetStr]) {
         finalItem = { ...finalItem, ...t.overrides[targetStr] };
@@ -1434,12 +1458,20 @@ function initMonthSwiper(year) {
     const today = toDateStr(new Date());
 
     days.forEach(({ date: d, cur }) => {
+      const cell = document.createElement('div');
+      cell.className = 'day-cell' + (!cur ? ' other-month' : '');
+
+      if (!cur) {
+        cell.style.pointerEvents = 'none';
+        slide.appendChild(cell);
+        return;
+      }
+
       const ds = toDateStr(d);
       const ws = getWorkStatus(d, S.userScale);
       const evs = getEventsForDate(d);
       const trs = getTransactionsForDate(d);
-      const cell = document.createElement('div');
-      cell.className = 'day-cell' + (!cur ? ' other-month' : '') + (ds === today ? ' today' : '') + (cur && ws ? (ws.isOff ? ' off-day' : ' work-day') : '');
+      cell.className += (ds === today ? ' today' : '') + (ws ? (ws.isOff ? ' off-day' : ' work-day') : '');
 
       let pillsHtml = '';
       const allItems = [
@@ -1468,13 +1500,13 @@ function initMonthSwiper(year) {
       }).join('');
 
       cell.innerHTML = `
-        <div class="day-num"><span>${d.getDate()}</span>${(isHoliday(d) && cur ? '<span class="day-holiday-badge">F</span>' : '')}</div>
-        ${(isHoliday(d) && cur ? `<div class="day-holiday-name">${isHoliday(d)}</div>` : '')}
+        <div class="day-num"><span>${d.getDate()}</span>${(isHoliday(d) ? '<span class="day-holiday-badge">F</span>' : '')}</div>
+        ${(isHoliday(d) ? `<div class="day-holiday-name">${isHoliday(d)}</div>` : '')}
         <div class="day-events-wrap">
           ${pillsHtml}
           ${(allItems.length > 2 ? `<div class="day-more">+${allItems.length - 2} ${dayMore}</div>` : '')}
         </div>
-        ${(cur && ws && S.userScale ? `<div class="day-work-label ${ws.isOff ? 'off' : 'work'}">${i18n.t(ws.isOff ? 'badge_off' : 'badge_work')}</div><div class="day-work-dot ${ws.isOff ? 'off' : 'work'}"> </div>` : '')}
+        ${(ws && S.userScale ? `<div class="day-work-label ${ws.isOff ? 'off' : 'work'}">${i18n.t(ws.isOff ? 'badge_off' : 'badge_work')}</div><div class="day-work-dot ${ws.isOff ? 'off' : 'work'}"> </div>` : '')}
       `;
       cell.onclick = (e) => { e.stopPropagation(); play('click'); openDayModal(d); };
       slide.appendChild(cell);
@@ -2012,7 +2044,16 @@ async function saveEventForm(e) {
     showLoading('loading_saving');
     const saveData = { ...data };
     if (isEditingVirtual && original) {
-      saveData.date = original.date;
+      if (data.date !== S.editingOccurrenceDate) {
+        const dOld = new Date(S.editingOccurrenceDate + 'T12:00:00');
+        const dNew = new Date(data.date + 'T12:00:00');
+        const diffMs = dNew.getTime() - dOld.getTime();
+        const origStart = new Date(original.date + 'T12:00:00');
+        const newStart = new Date(origStart.getTime() + diffMs);
+        saveData.date = toDateStr(newStart);
+      } else {
+        saveData.date = original.date;
+      }
     }
     if (S.editingEventId) await updateEvent(S.editingEventId, saveData); else await addEvent(saveData);
     finishSave();
@@ -2022,18 +2063,37 @@ async function saveEventForm(e) {
     try {
       showLoading('loading_saving');
       if (original) {
+        const oldOccDate = S.editingOccurrenceDate;
+        const newOccDate = data.date;
+
         const overrideData = {
           title: data.title,
           description: data.description,
           time: data.time,
           endTime: data.endTime,
           category: data.category,
-          date: data.date,
+          date: newOccDate,
           endDate: data.endDate
         };
+
         if (!original.overrides) original.overrides = {};
-        original.overrides[S.editingOccurrenceDate] = overrideData;
-        await userRef(`events/${original.id}/overrides/${S.editingOccurrenceDate}`).set(overrideData);
+        if (!original.excludedDates) original.excludedDates = {};
+
+        if (oldOccDate !== newOccDate) {
+          original.excludedDates[oldOccDate] = true;
+          await userRef(`events/${original.id}/excludedDates/${oldOccDate}`).set(true);
+
+          if (original.overrides[oldOccDate]) {
+            delete original.overrides[oldOccDate];
+            await userRef(`events/${original.id}/overrides/${oldOccDate}`).remove();
+          }
+
+          original.overrides[newOccDate] = overrideData;
+          await userRef(`events/${original.id}/overrides/${newOccDate}`).set(overrideData);
+        } else {
+          original.overrides[oldOccDate] = overrideData;
+          await userRef(`events/${original.id}/overrides/${oldOccDate}`).set(overrideData);
+        }
       }
       finishSave();
     } catch (err) {
@@ -2786,7 +2846,16 @@ document.addEventListener('DOMContentLoaded', () => {
         showLoading('loading_saving');
         const finalData = { ...saveDataLocal };
         if (isEditingVirtual && original) {
-          finalData.date = original.date;
+          if (saveDataLocal.date !== S.editingOccurrenceDate) {
+            const dOld = new Date(S.editingOccurrenceDate + 'T12:00:00');
+            const dNew = new Date(saveDataLocal.date + 'T12:00:00');
+            const diffMs = dNew.getTime() - dOld.getTime();
+            const origStart = new Date(original.date + 'T12:00:00');
+            const newStart = new Date(origStart.getTime() + diffMs);
+            finalData.date = toDateStr(newStart);
+          } else {
+            finalData.date = original.date;
+          }
         }
         const idx = S.transactions.findIndex(t => t.id === transId);
         if (idx !== -1) S.transactions[idx] = finalData; else {
@@ -2801,15 +2870,34 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
           showLoading('loading_saving');
           if (original) {
+            const oldOccDate = S.editingOccurrenceDate;
+            const newOccDate = saveDataLocal.date;
+
             const overrideData = {
               desc: saveDataLocal.desc,
               amount: saveDataLocal.amount,
               type: saveDataLocal.type,
-              date: saveDataLocal.date
+              date: newOccDate
             };
+
             if (!original.overrides) original.overrides = {};
-            original.overrides[S.editingOccurrenceDate] = overrideData;
-            await userRef(`transactions/${original.id}/overrides/${S.editingOccurrenceDate}`).set(overrideData);
+            if (!original.excludedDates) original.excludedDates = {};
+
+            if (oldOccDate !== newOccDate) {
+              original.excludedDates[oldOccDate] = true;
+              await userRef(`transactions/${original.id}/excludedDates/${oldOccDate}`).set(true);
+
+              if (original.overrides[oldOccDate]) {
+                delete original.overrides[oldOccDate];
+                await userRef(`transactions/${original.id}/overrides/${oldOccDate}`).remove();
+              }
+
+              original.overrides[newOccDate] = overrideData;
+              await userRef(`transactions/${original.id}/overrides/${newOccDate}`).set(overrideData);
+            } else {
+              original.overrides[oldOccDate] = overrideData;
+              await userRef(`transactions/${original.id}/overrides/${oldOccDate}`).set(overrideData);
+            }
           }
           finishTransSave();
         } catch (err) {
