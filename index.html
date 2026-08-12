@@ -39,8 +39,6 @@
       display: none !important;
     }
 
-    .lang-toggle-btn:hover {}
-
     .lang-toggle-btn:active {
       transform: scale(0.95);
     }
@@ -1490,9 +1488,17 @@
       <div class="modal-header">
         <div class="modal-title" data-i18n="finance_title">Controle Financeiro</div>
 
-        <button id="btn-close-finances" class="btn btn-ghost btn-icon-sm modal-close">
-          <span class="material-symbols-outlined">close</span>
-        </button>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button id="btn-new-transaction-modal" class="btn btn-primary"
+            style="height:34px; padding:0 12px; font-size:0.78rem; border-radius:10px; gap:4px;"
+            onclick="window.openTransactionForm(null, null)">
+            <span class="material-symbols-outlined" style="font-size:16px;">add</span>
+            <span data-i18n="btn_new_transaction">Nova Transação</span>
+          </button>
+          <button id="btn-close-finances" class="btn btn-ghost btn-icon-sm modal-close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
       </div>
       <div class="modal-body">
 

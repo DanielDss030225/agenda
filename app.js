@@ -2575,6 +2575,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   $('btn-new-event').onclick = () => { window.closeAnyModal(); S.selectedDate = new Date(); openEventForm(); };
   $('btn-new-transaction-side').onclick = () => { window.closeAnyModal(); window.openTransactionForm(new Date()); };
+  if ($('btn-new-transaction-modal')) {
+    $('btn-new-transaction-modal').onclick = () => {
+      window.closeAnyModal();
+      window.openTransactionForm(S.selectedDate || new Date());
+    };
+  }
 
   $('btn-add-from-day').onclick = () => { closeModal('modal-day'); openEventForm(); };
   $('btn-toggle-sound').onclick = () => { S.soundsEnabled = !S.soundsEnabled; updateSoundIcon(); saveProfile(); };
