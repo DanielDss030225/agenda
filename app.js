@@ -846,6 +846,22 @@ function isHoliday(date) {
   return holidays[toDateStr(date)] || null;
 }
 
+function getFifthBusinessDay(year, month) {
+  let count = 0;
+  for (let day = 1; day <= 31; day++) {
+    const d = new Date(year, month, day);
+    if (d.getMonth() !== month) break;
+    const dow = d.getDay(); // 0 = Sun, 6 = Sat
+    if (dow >= 1 && dow <= 5 && !isHoliday(d)) {
+      count++;
+      if (count === 5) {
+        return toDateStr(d);
+      }
+    }
+  }
+  return null;
+}
+
 /** Returns the daily Bible messages for the current language */
 function getMensagensDoDia() {
   if (typeof i18n !== 'undefined') {
@@ -1456,6 +1472,7 @@ function initMonthSwiper(year) {
     const date = new Date(year, m, 1);
     const days = getDaysInMonth(year, m);
     const today = toDateStr(new Date());
+    const fifthBizDayStr = getFifthBusinessDay(year, m);
 
     days.forEach(({ date: d, cur }) => {
       const cell = document.createElement('div');
@@ -1471,7 +1488,9 @@ function initMonthSwiper(year) {
       const ws = getWorkStatus(d, S.userScale);
       const evs = getEventsForDate(d);
       const trs = getTransactionsForDate(d);
-      cell.className += (ds === today ? ' today' : '') + (ws ? (ws.isOff ? ' off-day' : ' work-day') : '');
+      const isFifthBizDay = (ds === fifthBizDayStr);
+
+      cell.className += (ds === today ? ' today' : '') + (ws ? (ws.isOff ? ' off-day' : ' work-day') : '') + (isFifthBizDay ? ' fifth-biz-day' : '');
 
       let pillsHtml = '';
       const allItems = [
@@ -1500,7 +1519,13 @@ function initMonthSwiper(year) {
       }).join('');
 
       cell.innerHTML = `
-        <div class="day-num"><span>${d.getDate()}</span>${(isHoliday(d) ? '<span class="day-holiday-badge">F</span>' : '')}</div>
+        <div class="day-num">
+          <span>${d.getDate()}</span>
+          <span class="day-badges-right">
+            ${(isFifthBizDay ? '<span class="fifth-biz-badge" title="5º Dia Útil - Pagamento"><span class="material-symbols-outlined">attach_money</span></span>' : '')}
+            ${(isHoliday(d) ? '<span class="day-holiday-badge">F</span>' : '')}
+          </span>
+        </div>
         ${(isHoliday(d) ? `<div class="day-holiday-name">${isHoliday(d)}</div>` : '')}
         <div class="day-events-wrap">
           ${pillsHtml}
@@ -1819,6 +1844,15 @@ function openDayModal(d) {
       <div class="work-badge-large ${ws.isOff ? 'off' : 'work'}">
         <span class="material-symbols-outlined">${ws.isOff ? 'home' : 'work'}</span>
         ${ws.isOff ? (typeof i18n !== 'undefined' ? i18n.t('tutorial_off_dot') : 'Folga') : (typeof i18n !== 'undefined' ? i18n.t('tutorial_work_dot') : 'Trabalho')}
+      </div>
+    `;
+  }
+  const isFifthBizDayModal = (toDateStr(d) === getFifthBusinessDay(d.getFullYear(), d.getMonth()));
+  if (isFifthBizDayModal) {
+    statusEl.innerHTML += `
+      <div class="fifth-biz-badge-modal">
+        <span class="material-symbols-outlined">payments</span>
+        5º Dia Útil
       </div>
     `;
   }
